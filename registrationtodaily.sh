@@ -1,7 +1,7 @@
-﻿#!/bin/bash
+#!/bin/bash
 
 THIS_DIR=$(cd $(dirname $0);pwd)
-SCRIPT="clamscan"
+SCRIPT="clamscanrunner"
 SRC=${THIS_DIR}/${SCRIPT}
 
 TARGET_DIR="/etc/cron.daily"

@@ -1,6 +1,6 @@
-﻿#!/bin/bash
+#!/bin/bash
 
-SCRIPT="clamscan"
+SCRIPT="clamscanrunner"
 TARGET_DIR="/etc/cron.daily"
 DEST="${TARGET_DIR}/${SCRIPT}"
 
