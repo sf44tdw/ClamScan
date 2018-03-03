@@ -39,7 +39,18 @@ find ${LOGDIR} -name "*.log" -type f -mtime +${PARAM_DATE_NUM} -exec rm -f {} \;
 
 # DB update
 # CentOS(epelからインストール)の場合、freshclamのインストール時に、3時間ごとの自動更新が登録されるのであまり意味が無いが、念のため。
-freshclam >> ${LOGFILE} 2>&1
+# debian系でfreshclam実行時に下記のようなエラーが出るようならRETRY_FRESHCLAMをYに設定する。
+# ERROR: /var/log/clamav/freshclam.log is locked by another process
+# ERROR: Problem with internal logger (UpdateLogFile = /var/log/clamav/freshclam.log).
+RETRY_FRESHCLAM="N"
+if [ ${RETRY_FRESHCLAM} -eq "Y" ]; then
+	echo "freshclam失敗時は、freshclamログ再作成後リトライ。"
+	FRESHCLAM_LOGFILE="/var/log/clamav/freshclam.log"
+	freshclam >> ${LOGFILE} 2>&1 || rm -f ${FRESHCLAM_LOGFILE} && touch ${FRESHCLAM_LOGFILE} && chown clamav:clamav ${FRESHCLAM_LOGFILE} && freshclam >> ${LOGFILE} 2>&1
+else
+	echo "freshclam失敗時は、リトライしない。"
+	freshclam >> ${LOGFILE} 2>&1
+fi
 
 # virus scan
 #感染したファイルのみログに記載する。
