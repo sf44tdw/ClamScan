@@ -44,11 +44,11 @@ find ${LOGDIR} -name "*.log" -type f -mtime +${PARAM_DATE_NUM} -exec rm -f {} \;
 # ERROR: Problem with internal logger (UpdateLogFile = /var/log/clamav/freshclam.log).
 RETRY_FRESHCLAM=0
 if [ ! "0" -eq ${RETRY_FRESHCLAM} ]; then  
-	echo "freshclam失敗時は、freshclamログ再作成後リトライ。"
+	echo "freshclam失敗時は、freshclamログ再作成後リトライ。" >> ${LOGFILE} 2>&1
 	FRESHCLAM_LOGFILE="/var/log/clamav/freshclam.log"
 	freshclam >> ${LOGFILE} 2>&1 || rm -f ${FRESHCLAM_LOGFILE} && touch ${FRESHCLAM_LOGFILE} && chown clamav:clamav ${FRESHCLAM_LOGFILE} && freshclam >> ${LOGFILE} 2>&1
 else
-	echo "freshclam失敗時は、リトライしない。"
+	echo "freshclam失敗時は、リトライしない。" >> ${LOGFILE} 2>&1
 	freshclam >> ${LOGFILE} 2>&1
 fi
 
