@@ -54,7 +54,7 @@ fi
 
 # virus scan
 #感染したファイルのみログに記載する。
-clamscan / -r --infected --remove --exclude-dir='/sys|/proc' >> ${LOGFILE} 2>&1
+clamscan / -r --infected --remove --exclude-dir='/sys|/proc|/dev' >> ${LOGFILE} 2>&1
 
 #ログファイルの内容を表示
 cat ${LOGFILE}
