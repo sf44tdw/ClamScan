@@ -1,8 +1,30 @@
 ﻿#!/bin/bash
 
+. /root/.bash_profile
+
 #rootのcrontabに起動設定を書くなどして、rootで動くようにしないとログが残らない。
 
-PATH=/usr/bin:/bin
+
+usage_exit() {
+        echo "Usage: $0 [-f]" 1>&2
+        echo 'fleshclamとclamscanを実行する。-f 設定(実行時間の制限を無視する。)' 1>&2
+        exit 1
+}
+
+ENABLE_f="f"
+
+
+while getopts "f" OPT
+do
+    case $OPT in
+        f)  ENABLE_f="t"
+            ;;
+        :|\?) usage_exit
+            ;;
+    esac
+done
+
+shift $((OPTIND - 1))
 
 LOGDIR=/var/log/clamav-scan-log/
 
@@ -14,17 +36,18 @@ fi
 
 touch ${LOGFILE}
 
-# #今の時間(何時?)
-# NowHour=`date +%k`
-# #割る数
-# Dev=4
-# mod=$(( ${NowHour} % ${Dev} ))
-# #割る数で割り切れない時間なら起動しない。
-# if [ ! "0" -eq ${mod} ]; then  
-#   echo ${NowHour} " は、" ${Dev}"で割り切れる時間ではありません。">> ${LogFile}
-#   exit 1
-# fi
-
+if [ "${ENABLE_f}" != "t" ]; then  
+ #今の時間(何時?)
+ NowHour=`date +%k`
+ #割る数
+ Dev=4
+ mod=$(( ${NowHour} % ${Dev} ))
+ #割る数で割り切れない時間なら起動しない。
+ if [ ! "0" -eq ${mod} ]; then  
+   echo ${NowHour} " は、" ${Dev}"で割り切れる時間ではありません。">> ${LogFile}
+   exit 1
+fi
+fi
 
 #多重起動防止機講
 # 同じ名前のプロセスが起動していたら起動しない。
@@ -33,8 +56,8 @@ ln -s /dummy $_lockfile 2> /dev/null || { echo 'Cannot run multiple instance.'  
 trap "rm $_lockfile; exit" 1 2 3 15
 
 
-# ファイル更新日時が10日を越えたログファイルを削除
-PARAM_DATE_NUM=10
+# ファイル更新日時が5000日を越えたログファイルを削除
+PARAM_DATE_NUM=5000
 find ${LOGDIR} -name "*.log" -type f -mtime +${PARAM_DATE_NUM} -exec rm -f {} \;
 
 # DB update
