@@ -2,7 +2,7 @@
 
 . /root/.bash_profile
 
-#rootのcrontabに起動設定を書くなどして、rootで動くようにしないとログが残らない。
+# rootのcrontabに起動設定を書くなどして、rootで動くようにしないとログが残らない。
 
 
 usage_exit() {
@@ -26,25 +26,30 @@ done
 
 shift $((OPTIND - 1))
 
-LOGDIR=/var/log/clamav-scan-log/
+LOGDIR=""
+LOGDIR="/var/log/clamav-scan-log/"
+LOGFILE=""
+LOGFILE="${LOGDIR}`date +%Y%m%d%H%M%S`.log"
 
-LOGFILE=${LOGDIR}`date +%Y%m%d%H%M%S`.log
-
-if [ ! -e ${LOGDIR} ]; then
-`mkdir ${LOGDIR}`
+if [ ! -e "${LOGDIR}" ]; then
+`mkdir -p -m 755 "${LOGDIR}"`
 fi
 
-touch ${LOGFILE}
+touch "${LOGFILE}"
 
 if [ "${ENABLE_f}" != "t" ]; then  
  #今の時間(何時?)
  NowHour=`date +%k`
  #割る数
  Dev=4
+
+echo "now=${NowHour}" >>"${LOGFILE}"
+echo "dev=${Dev}" >>"${LOGFILE}"
+
+
  mod=$(( ${NowHour} % ${Dev} ))
  #割る数で割り切れない時間なら起動しない。
  if [ ! "0" -eq ${mod} ]; then  
-   echo ${NowHour} " は、" ${Dev}"で割り切れる時間ではありません。">> ${LogFile}
    exit 1
 fi
 fi
@@ -52,7 +57,7 @@ fi
 #多重起動防止機講
 # 同じ名前のプロセスが起動していたら起動しない。
 _lockfile="/tmp/`basename $0`.lock"
-ln -s /dummy $_lockfile 2> /dev/null || { echo 'Cannot run multiple instance.'  >>${LOGFILE}; exit 9; }
+ln -s /dummy $_lockfile 2> /dev/null || { echo 'Cannot run multiple instance.'  >>"${LOGFILE}"; exit 9; }
 trap "rm $_lockfile; exit" 1 2 3 15
 
 
