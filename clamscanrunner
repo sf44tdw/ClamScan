@@ -87,7 +87,4 @@ clamscan / -r --infected --remove --exclude-dir='/sys|/proc|/dev' >> ${LOGFILE} 
 #ログファイルの内容を表示
 cat ${LOGFILE}
 
-#ログファイルの読み込みは全員可能にする。
-chmod o+r ${LOGFILE}
-
 rm $_lockfile
