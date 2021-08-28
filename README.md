@@ -18,4 +18,3 @@ sesearch -b antivirus_can_scan_system -AC
 ./setrealtimescan.sh
 
 
-
