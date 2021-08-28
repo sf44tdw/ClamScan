@@ -15,6 +15,7 @@ sesearch -b antivirus_can_scan_system -AC
 
 ./allowselinux.sh
 
+./setrealtimescan.sh
 
 
 
