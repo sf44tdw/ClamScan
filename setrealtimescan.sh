@@ -19,9 +19,14 @@ sed -i '/^VirusEvent.*\//d' ${CLAMD_CONFIG_FILE_NAME}
 echo '' >> "${CLAMD_CONFIG_FILE_NAME}"
 echo 'VirusEvent /usr/local/bin/foundvirus.sh' >> "${CLAMD_CONFIG_FILE_NAME}"
 
+#監視先を設定する。
 sed -i '/^OnAccessIncludePath.*\//d' ${CLAMD_CONFIG_FILE_NAME}
 echo '' >> "${CLAMD_CONFIG_FILE_NAME}"
 echo 'OnAccessIncludePath /home' >> "${CLAMD_CONFIG_FILE_NAME}"
+
+sed -i '/^OnAccessIncludePath.*\//d' ${CLAMD_CONFIG_FILE_NAME}
+echo '' >> "${CLAMD_CONFIG_FILE_NAME}"
+echo 'OnAccessIncludePath /var/cache' >> "${CLAMD_CONFIG_FILE_NAME}"
 
 sed -i '/^OnAccessExtraScanning.*/d' ${CLAMD_CONFIG_FILE_NAME}
 echo '' >> "${CLAMD_CONFIG_FILE_NAME}"
@@ -43,7 +48,7 @@ systemctl restart clamd@scan
 systemctl status clamd@scan
 systemctl enable clamonacc
 systemctl restart clamonacc
-systemctl status clamonacc -l
+systemctl status clamonacc
 
 rm ${_lockfile}
 
