@@ -6,12 +6,12 @@ trap "rm ${_lockfile}; exit" 1 2 3 15
 
 PATH_EXCLISIVE_LOG="/tmp/path_check_failure.`date +%Y%m%d%H%M%S`.$$"
 
+#ウイルス対策ソフトによるスキャンの許可
+setsebool -P antivirus_can_scan_system on
+
 #clamdscanのSELinuxのアクセス許可を行う。
 #(アクセス違反のログを使うので、1回実行する。)
 clamdscan / > "${PATH_EXCLISIVE_LOG}" 2>&1
-
-#ウイルス対策ソフトによるスキャンの許可
-setsebool -P antivirus_can_scan_system on
 
 #clamdが拒否されたもの全許可。
 cd /tmp
