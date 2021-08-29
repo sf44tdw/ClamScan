@@ -23,9 +23,6 @@ echo 'VirusEvent /usr/local/bin/foundvirus.sh' >> "${CLAMD_CONFIG_FILE_NAME}"
 sed -i '/^OnAccessIncludePath.*\//d' ${CLAMD_CONFIG_FILE_NAME}
 echo '' >> "${CLAMD_CONFIG_FILE_NAME}"
 echo 'OnAccessIncludePath /home' >> "${CLAMD_CONFIG_FILE_NAME}"
-
-sed -i '/^OnAccessIncludePath.*\//d' ${CLAMD_CONFIG_FILE_NAME}
-echo '' >> "${CLAMD_CONFIG_FILE_NAME}"
 echo 'OnAccessIncludePath /var/cache' >> "${CLAMD_CONFIG_FILE_NAME}"
 
 sed -i '/^OnAccessExtraScanning.*/d' ${CLAMD_CONFIG_FILE_NAME}
