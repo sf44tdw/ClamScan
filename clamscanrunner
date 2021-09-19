@@ -7,7 +7,7 @@
 
 usage_exit() {
         echo "Usage: $0 [-f]" 1>&2
-        echo 'fleshclamとclamscanを実行する。-f 設定(実行時間の制限を無視する。)' 1>&2
+        echo 'fleshclamとclamscanを実行する。-f 設定(多重起動防止と実行時間の制限を無視する。)' 1>&2
         exit 1
 }
 
@@ -48,15 +48,18 @@ echo "dev=${Dev}" >>"${LOGFILE}"
 
 
  mod=$(( ${NowHour} % ${Dev} ))
- #割る数で割り切れない時間なら起動しない。
+ #制限が有効で、割る数で割り切れない時間なら起動しない。
  if [ ! "0" -eq ${mod} ]; then  
    exit 1
 fi
 fi
 
 #多重起動防止機講
-# 同じ名前のプロセスが起動していたら起動しない。
+# 制限が有効で、同じ名前のプロセスが起動していたら起動しない。
 _lockfile="/tmp/`basename $0`.lock"
+if [ "${ENABLE_f}" = "t" ]; then  
+rm -f $_lockfile
+fi
 ln -s /dummy $_lockfile 2> /dev/null || { echo 'Cannot run multiple instance.'  >>"${LOGFILE}"; exit 9; }
 trap "rm $_lockfile; exit" 1 2 3 15
 
