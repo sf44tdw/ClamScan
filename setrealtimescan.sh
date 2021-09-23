@@ -7,7 +7,7 @@ trap "rm ${_lockfile}; exit" 1 2 3 15
 
 
 CLAMD_CONFIG_FILE_NAME="/etc/clamd.d/scan.conf"
-cp -a ${CLAMD_CONFIG_FILE_NAME}{,.`date +%Y%m%d%H%M%S`.bak}
+cp -a ${CLAMD_CONFIG_FILE_NAME}{,.`date +%Y%m%d%H%M%S`.bak} || exit 1
 
 #通知用スクリプトを配置する。
 chown root:root ./foundvirus.sh
