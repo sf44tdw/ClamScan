@@ -15,7 +15,7 @@ freshclam
 
 
 CLAMD_CONFIG_FILE_NAME="/etc/clamd.d/scan.conf"
-cp -a ${CLAMD_CONFIG_FILE_NAME}{,.`date +%Y%m%d%H%M%S`.bak}
+cp -a ${CLAMD_CONFIG_FILE_NAME}{,.`date +%Y%m%d%H%M%S`.bak}|| exit 2
 sed -i '/^Example/s/^/#/' ${CLAMD_CONFIG_FILE_NAME}
 sed -i 's/^User clamscan/User root/g' ${CLAMD_CONFIG_FILE_NAME}
 sed -i 's/^#TCPSocket 3310/TCPSocket 3310/g' ${CLAMD_CONFIG_FILE_NAME}
