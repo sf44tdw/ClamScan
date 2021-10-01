@@ -3,7 +3,7 @@
 
 yum -y install bzip2-devel
 
-yum -y --enablerepo=epel install clamav clamd clamav-update
+yum -y install clamav clamd clamav-update
 
 cd && git clone https://github.com/sf44tdw/ClamScanRunner.git
 
