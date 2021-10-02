@@ -20,6 +20,7 @@ echo '' >> "${CLAMD_CONFIG_FILE_NAME}"
 echo 'VirusEvent /usr/local/bin/foundvirus.sh' >> "${CLAMD_CONFIG_FILE_NAME}"
 
 #監視先を設定する。
+#監視対象のディレクトリもしくはサブディレクトリでGUIアプリケーション(例:Eclipse)を実行すると非常に大きな負荷がかかる。(CPU使用率がほぼ100%まで行くこともある。)
 sed -i '/^OnAccessIncludePath.*\//d' ${CLAMD_CONFIG_FILE_NAME}
 echo '' >> "${CLAMD_CONFIG_FILE_NAME}"
 echo 'OnAccessIncludePath /home' >> "${CLAMD_CONFIG_FILE_NAME}"
