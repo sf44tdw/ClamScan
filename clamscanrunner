@@ -128,7 +128,7 @@ STATUS_CLAMD_PRE_AFTER_SCAN=$(systemctl is-active clamd@scan)
 echo "clamdの状態(再開前前) = ${STATUS_CLAMD_PRE_AFTER_SCAN}" >> ${LOGFILE} 2>&1
 if [ "${STATUS_CLAMD_PRE_AFTER_SCAN}" = "${STATUS_ACTIVE}" ]; then
 echo "clamdの開始" >> ${LOGFILE} 2>&1
-systemctl start clamd@scan >> ${LOGFILE} 2>&1 ||  delete_lock_and_exit $_lockfile "clamdの開始に失敗しました。終了します。" ${LOGFILE} 7
+systemctl start clamd@scan >> ${LOGFILE} 2>&1 || delete_lock_and_exit $_lockfile "clamdの開始に失敗しました。終了します。" ${LOGFILE} 7
 STATUS_CLAMD_POST_AFTER_SCAN=$(systemctl is-active clamd@scan)
 echo "clamdの状態(再開後) = ${STATUS_CLAMD_POST_AFTER_SCAN}" >> ${LOGFILE} 2>&1
 fi
