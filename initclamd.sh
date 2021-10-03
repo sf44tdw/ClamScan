@@ -33,7 +33,7 @@ echo 'ExcludePath ^/var/log/audit/' >> "${CLAMD_CONFIG_FILE_NAME}"
 
 time systemctl enable --now clamd@scan
 systemctl restart clamd@scan
-systemctl status clamd@scan
+systemctl status --no-pager clamd@scan
 
 rm ${_lockfile}
 

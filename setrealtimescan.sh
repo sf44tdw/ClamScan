@@ -45,10 +45,10 @@ echo 'OnAccessPrevention yes' >> "${CLAMD_CONFIG_FILE_NAME}"
 
 systemctl enable clamd@scan
 systemctl restart clamd@scan
-systemctl status clamd@scan
+systemctl status --no-pager clamd@scan
 systemctl enable clamonacc
 systemctl restart clamonacc
-systemctl status clamonacc
+systemctl status --no-pager clamonacc
 
 rm ${_lockfile}
 

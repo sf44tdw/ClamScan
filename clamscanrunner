@@ -2,6 +2,9 @@
 
 . /root/.bash_profile
 
+#サービスが起動中のステータスをあらわす文字列。
+readonly STATUS_ACTIVE="active"
+
 # rootのcrontabに起動設定を書くなどして、rootで動くようにしないとログが残らない。
 
 
@@ -50,30 +53,31 @@ echo "dev=${Dev}" >>"${LOGFILE}"
  mod=$(( ${NowHour} % ${Dev} ))
  #制限が有効で、割る数で割り切れない時間なら起動しない。
  if [ ! "0" -eq ${mod} ]; then  
-   exit 1
+   exit 2
 fi
 fi
 
 #多重起動防止機講
 # 制限が有効で、同じ名前のプロセスが起動していたら起動しない。
-_lockfile="/tmp/`basename $0`.lock"
-if [ "${ENABLE_f}" = "t" ]; then  
-rm -f $_lockfile
+if [ "${ENABLE_f}" != "t" ]; then  
+CMDLINE=$(cat /proc/$$/cmdline | xargs --null)
+if [[ $$ -ne $(pgrep -oxf "${CMDLINE}") ]]; then
+echo 'Cannot run multiple instance.' >> ${LOGFILE} 2>&1
+exit 9
 fi
-ln -s /dummy $_lockfile 2> /dev/null || { echo 'Cannot run multiple instance.'  >>"${LOGFILE}"; exit 9; }
-trap "rm $_lockfile; exit" 1 2 3 15
-
+fi
 
 # ファイル更新日時が5000日を越えたログファイルを削除
-PARAM_DATE_NUM=5000
+readonly PARAM_DATE_NUM=5000
 find ${LOGDIR} -name "*.log" -type f -mtime +${PARAM_DATE_NUM} -exec rm -f {} \;
+
 
 # DB update
 # CentOS(epelからインストール)の場合、freshclamのインストール時に、3時間ごとの自動更新が登録されるのであまり意味が無いが、念のため。
 # debian系でfreshclam実行時に下記のようなエラーが出るようならRETRY_FRESHCLAMを0以外に設定する。
 # ERROR: /var/log/clamav/freshclam.log is locked by another process
 # ERROR: Problem with internal logger (UpdateLogFile = /var/log/clamav/freshclam.log).
-RETRY_FRESHCLAM=0
+readonly RETRY_FRESHCLAM=0
 if [ ! "0" -eq ${RETRY_FRESHCLAM} ]; then  
 	echo "freshclam失敗時は、freshclamログ再作成後リトライ。" >> ${LOGFILE} 2>&1
 	FRESHCLAM_LOGFILE="/var/log/clamav/freshclam.log"
@@ -83,12 +87,60 @@ else
 	freshclam >> ${LOGFILE} 2>&1
 fi
 
+
+echo "\nclamdのメモリ消費量が大きいので、スキャン中はオンアクセススキャンを停止する。" >> ${LOGFILE} 2>&1
+
+STATUS_CLAMONACC_PRE_BEFORE_SCAN=$(systemctl is-active clamonacc)
+echo "clamonaccの状態(停止前) = ${STATUS_CLAMONACC_PRE_BEFORE_SCAN}" >> ${LOGFILE} 2>&1
+if [ "${STATUS_CLAMONACC_PRE_BEFORE_SCAN}" = "${STATUS_ACTIVE}" ]; then
+echo "clamonaccの停止" >> ${LOGFILE} 2>&1
+systemctl stop clamonacc >> ${LOGFILE} 2>&1 || exit 4
+STATUS_CLAMONACC_POST_BEFORE_SCAN=$(systemctl is-active clamonacc)
+echo "clamonaccの状態(停止後) = ${STATUS_CLAMONACC_POST_BEFORE_SCAN}" >> ${LOGFILE} 2>&1
+fi
+
+STATUS_CLAMD_PRE_BEFORE_SCAN=$(systemctl is-active clamd@scan)
+echo "clamdの状態(停止前) = ${STATUS_CLAMD_PRE_BEFORE_SCAN}" >> ${LOGFILE} 2>&1
+if [ "${STATUS_CLAMD_PRE_BEFORE_SCAN}" = "${STATUS_ACTIVE}" ]; then
+echo "clamdの停止" >> ${LOGFILE} 2>&1
+systemctl stop clamd@scan >> ${LOGFILE} 2>&1 || exit 5
+STATUS_CLAMD_POST_BEFORE_SCAN=$(systemctl is-active clamd@scan)
+echo "clamdの状態(停止後) = ${STATUS_CLAMD_POST_BEFORE_SCAN}" >> ${LOGFILE} 2>&1
+fi
+
+echo "オンアクセススキャンの停止を完了。\n" >> ${LOGFILE} 2>&1
+
+
 # virus scan
 #感染したファイルのみログに記載する。
 #感染したファイルは削除する。
-clamscan / -r --infected --remove --exclude-dir='/sys|/proc|/dev' >> ${LOGFILE} 2>&1
+clamscan / -r --infected --remove --exclude-dir='/sys|/proc|/dev' >> ${LOGFILE} 2>&1 || exit 6
+
+
+echo "\nオンアクセススキャンを再開する。" >> ${LOGFILE} 2>&1
+
+STATUS_CLAMONACC_PRE_AFTER_SCAN=$(systemctl is-active clamonacc)
+echo "clamonaccの状態(再開前) = ${STATUS_CLAMONACC_PRE_AFTER_SCAN}" >> ${LOGFILE} 2>&1
+if [ "${STATUS_CLAMONACC_PRE_AFTER_SCAN}" = "${STATUS_ACTIVE}" ]; then
+echo "clamonaccの開始" >> ${LOGFILE} 2>&1
+systemctl start clamonacc >> ${LOGFILE} 2>&1 || exit 7
+STATUS_CLAMONACC_POST_AFTER_SCAN=$(systemctl is-active clamonacc)
+echo "clamonaccの状態(再開後) = ${STATUS_CLAMONACC_POST_AFTER_SCAN}" >> ${LOGFILE} 2>&1
+fi
+
+STATUS_CLAMD_PRE_AFTER_SCAN=$(systemctl is-active clamd@scan)
+echo "clamdの状態(再開前前) = ${STATUS_CLAMD_PRE_AFTER_SCAN}" >> ${LOGFILE} 2>&1
+if [ "${STATUS_CLAMD_PRE_AFTER_SCAN}" = "${STATUS_ACTIVE}" ]; then
+echo "clamdの開始" >> ${LOGFILE} 2>&1
+systemctl start clamd@scan >> ${LOGFILE} 2>&1 || exit 8
+STATUS_CLAMD_POST_AFTER_SCAN=$(systemctl is-active clamd@scan)
+echo "clamdの状態(再開後) = ${STATUS_CLAMD_POST_AFTER_SCAN}" >> ${LOGFILE} 2>&1
+fi
+
+echo "オンアクセススキャンの再開を完了。\n" >> ${LOGFILE} 2>&1
+
+
 
 #ログファイルの内容を表示
 cat ${LOGFILE}
 
-rm $_lockfile
