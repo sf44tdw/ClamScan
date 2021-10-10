@@ -9,6 +9,10 @@ cd && git clone https://github.com/sf44tdw/ClamScanRunner.git
 
 cd ClamScanRunner
 
+
+#/usr/lib/systemd/system/clamd@.serviceの[Service]に以下を追記する。
+#CPUQuota=50%
+
 ./initclamd.sh
 
 ./registrationtodaily.sh
@@ -18,5 +22,4 @@ sesearch -b antivirus_can_scan_system -AC
 ./allowselinux.sh
 
 ./setrealtimescan.sh
-
 

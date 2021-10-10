@@ -140,7 +140,7 @@ echo `date +%Y%m%d%H%M%S` >>"${LOGFILE}"
 # virus scan
 #感染したファイルのみログに記載する。
 #感染したファイルは削除する。
-clamscan / -r --infected --remove --exclude-dir='/sys|/proc|/dev' >> ${LOGFILE} 2>&1 || delete_lock_and_exit $_lockfile "clamscanに失敗しました。終了します。" ${LOGFILE} 6
+nice -n 20 clamscan / -r --infected --remove --exclude-dir='/sys|/proc|/dev' >> ${LOGFILE} 2>&1 || delete_lock_and_exit $_lockfile "clamscanに失敗しました。終了します。" ${LOGFILE} 6
 
 #再開の際は、ステータスがactiveでないなら再始動を試みる。
 
