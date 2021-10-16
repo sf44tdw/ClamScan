@@ -13,6 +13,8 @@ cd ClamScanRunner
 #/usr/lib/systemd/system/clamd@.serviceの[Service]に以下を追記する。
 #CPUQuota=50%
 
+systemctl daemon-reload
+
 ./initclamd.sh
 
 ./registrationtodaily.sh
