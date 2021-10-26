@@ -30,6 +30,7 @@ echo 'ExcludePath ^/dev/' >> "${CLAMD_CONFIG_FILE_NAME}"
 echo 'ExcludePath ^/etc/' >> "${CLAMD_CONFIG_FILE_NAME}"
 echo 'ExcludePath ^/var/lib/selinux/' >> "${CLAMD_CONFIG_FILE_NAME}"
 echo 'ExcludePath ^/var/log/audit/' >> "${CLAMD_CONFIG_FILE_NAME}"
+echo 'ExcludePath ^/run/systemd/inaccessible' >> "${CLAMD_CONFIG_FILE_NAME}"
 
 time systemctl enable --now clamd@scan
 systemctl restart clamd@scan
