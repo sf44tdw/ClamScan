@@ -1,9 +1,9 @@
 #!/bin/bash
 
-SCRIPT="clamscanrunner"
-TARGET_DIR="/etc/cron.daily"
-DEST="${TARGET_DIR}/${SCRIPT}"
+source ./pathes
 
-rm -f ${DEST}
-
-ls -l ${TARGET_DIR}
+ls -l "${DAILY_DEST}" "${ROCKFILE_ERASER_DEST}"
+echo
+rm -f "${DAILY_DEST}" "${ROCKFILE_ERASER_DEST}"
+echo
+ls -l "${DAILY_DEST}" "${ROCKFILE_ERASER_DEST}"
