@@ -112,8 +112,8 @@ echo "clamonaccの停止" >> ${LOGFILE} 2>&1
 systemctl stop clamonacc
 STATUS_CLAMONACC_POST_BEFORE_SCAN=$(systemctl is-active clamonacc)
 echo "clamonaccの状態(停止後) = ${STATUS_CLAMONACC_POST_BEFORE_SCAN}" >> ${LOGFILE} 2>&1
-if [ "${STATUS_CLAMONACC_POST_BEFORE_SCAN}" != "${STATUS_INACTIVE}" ]; then
-delete_lock_and_exit $_lockfile "clamonaccの停止に失敗しました。終了します。" ${LOGFILE} 4
+if [ "${STATUS_CLAMONACC_POST_BEFORE_SCAN}" = "${STATUS_ACTIVE}" ]; then
+delete_lock_and_exit $_lockfile "clamonaccが停止していません。終了します。" ${LOGFILE} 4
 fi
 fi
 
@@ -126,8 +126,8 @@ echo "clamdの停止" >> ${LOGFILE} 2>&1
 systemctl stop clamd@scan
 STATUS_CLAMD_POST_BEFORE_SCAN=$(systemctl is-active clamd@scan)
 echo "clamdの状態(停止後) = ${STATUS_CLAMD_POST_BEFORE_SCAN}" >> ${LOGFILE} 2>&1
-if [ "${STATUS_CLAMD_POST_BEFORE_SCAN}" != "${STATUS_INACTIVE}" ]; then
-delete_lock_and_exit $_lockfile "clamdの停止に失敗しました。終了します。" ${LOGFILE} 5
+if [ "${STATUS_CLAMD_POST_BEFORE_SCAN}" = "${STATUS_ACTIVE}" ]; then
+delete_lock_and_exit $_lockfile "clamdが停止していません。終了します。" ${LOGFILE} 5
 fi
 fi
 
