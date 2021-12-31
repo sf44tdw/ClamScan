@@ -6,6 +6,8 @@
 readonly STATUS_ACTIVE="active"
 #サービスが停止中のステータスをあらわす文字列。
 readonly STATUS_INACTIVE="inactive"
+#サービスが有効の時の文字列。
+readonly STATUS_ENABLED="enabled"
 
 # rootのcrontabに起動設定を書くなどして、rootで動くようにしないとログが残らない。
 
@@ -103,35 +105,45 @@ fi
 echo `date +%Y%m%d%H%M%S` >>"${LOGFILE}"
 
 #clamdのメモリ消費量が大きいので、スキャン中はオンアクセススキャンを停止する。
-echo "オンアクセススキャンを停止する。" >> ${LOGFILE} 2>&1
+#サービスが有効では無い場合は何もしない。
 
-STATUS_CLAMONACC_PRE_BEFORE_SCAN=$(systemctl is-active clamonacc)
+readonly ON_ACCESS_SCAN_SERVICE='clamonacc'
+readonly CLAMD_SERVICE='clamd@scan'
+
+#関連するサービスの有効性を確認する。
+ON_ACCESS_ENABLED=$(systemctl is-enabled ${ON_ACCESS_SCAN_SERVICE})
+CLAMD_ENABLED=$(systemctl is-enabled ${CLAMD_SERVICE})
+
+echo "オンアクセススキャンを停止する。" >> ${LOGFILE} 2>&1
+if [ "${ON_ACCESS_ENABLED}" = "${STATUS_ENABLED}" ]; then
+STATUS_CLAMONACC_PRE_BEFORE_SCAN=$(systemctl is-active ${ON_ACCESS_SCAN_SERVICE})
 echo "clamonaccの状態(停止前) = ${STATUS_CLAMONACC_PRE_BEFORE_SCAN}" >> ${LOGFILE} 2>&1
 if [ "${STATUS_CLAMONACC_PRE_BEFORE_SCAN}" = "${STATUS_ACTIVE}" ]; then
 echo "clamonaccの停止" >> ${LOGFILE} 2>&1
 systemctl stop clamonacc
-STATUS_CLAMONACC_POST_BEFORE_SCAN=$(systemctl is-active clamonacc)
+STATUS_CLAMONACC_POST_BEFORE_SCAN=$(systemctl is-active ${ON_ACCESS_SCAN_SERVICE})
 echo "clamonaccの状態(停止後) = ${STATUS_CLAMONACC_POST_BEFORE_SCAN}" >> ${LOGFILE} 2>&1
 if [ "${STATUS_CLAMONACC_POST_BEFORE_SCAN}" = "${STATUS_ACTIVE}" ]; then
 delete_lock_and_exit $_lockfile "clamonaccが停止していません。終了します。" ${LOGFILE} 4
 fi
 fi
-
 wait_2_min
+fi
 
-STATUS_CLAMD_PRE_BEFORE_SCAN=$(systemctl is-active clamd@scan)
+if [ "${CLAMD_ENABLED}" = "${STATUS_ENABLED}" ]; then
+STATUS_CLAMD_PRE_BEFORE_SCAN=$(systemctl is-active ${CLAMD_SERVICE})
 echo "clamdの状態(停止前) = ${STATUS_CLAMD_PRE_BEFORE_SCAN}" >> ${LOGFILE} 2>&1
 if [ "${STATUS_CLAMD_PRE_BEFORE_SCAN}" = "${STATUS_ACTIVE}" ]; then
 echo "clamdの停止" >> ${LOGFILE} 2>&1
 systemctl stop clamd@scan
-STATUS_CLAMD_POST_BEFORE_SCAN=$(systemctl is-active clamd@scan)
+STATUS_CLAMD_POST_BEFORE_SCAN=$(systemctl is-active ${CLAMD_SERVICE})
 echo "clamdの状態(停止後) = ${STATUS_CLAMD_POST_BEFORE_SCAN}" >> ${LOGFILE} 2>&1
 if [ "${STATUS_CLAMD_POST_BEFORE_SCAN}" = "${STATUS_ACTIVE}" ]; then
 delete_lock_and_exit $_lockfile "clamdが停止していません。終了します。" ${LOGFILE} 5
 fi
 fi
-
 wait_2_min
+fi
 
 echo "オンアクセススキャンの停止を完了。" >> ${LOGFILE} 2>&1
 
@@ -148,33 +160,35 @@ echo `date +%Y%m%d%H%M%S` >>"${LOGFILE}"
 
 echo "オンアクセススキャンを再開する。" >> ${LOGFILE} 2>&1
 
-STATUS_CLAMD_PRE_AFTER_SCAN=$(systemctl is-active clamd@scan)
+if [ "${CLAMD_ENABLED}" = "${STATUS_ENABLED}" ]; then
+STATUS_CLAMD_PRE_AFTER_SCAN=$(systemctl is-active ${CLAMD_SERVICE})
 echo "clamdの状態(再開前前) = ${STATUS_CLAMD_PRE_AFTER_SCAN}" >> ${LOGFILE} 2>&1
 if [ "${STATUS_CLAMD_PRE_AFTER_SCAN}" != "${STATUS_ACTIVE}" ]; then
 echo "clamdの開始" >> ${LOGFILE} 2>&1
 systemctl restart clamd@scan
-STATUS_CLAMD_POST_AFTER_SCAN=$(systemctl is-active clamd@scan)
+STATUS_CLAMD_POST_AFTER_SCAN=$(systemctl is-active ${CLAMD_SERVICE})
 echo "clamdの状態(再開後) = ${STATUS_CLAMD_POST_AFTER_SCAN}" >> ${LOGFILE} 2>&1
 if [ "${STATUS_CLAMD_POST_AFTER_SCAN}" != "${STATUS_ACTIVE}" ]; then
 delete_lock_and_exit $_lockfile "clamdの開始に失敗しました。終了します。" ${LOGFILE} 7
 fi
 fi
-
 wait_2_min
+fi
 
-STATUS_CLAMONACC_PRE_AFTER_SCAN=$(systemctl is-active clamonacc)
+if [ "${ON_ACCESS_ENABLED}" = "${STATUS_ENABLED}" ]; then
+STATUS_CLAMONACC_PRE_AFTER_SCAN=$(systemctl is-active ${ON_ACCESS_SCAN_SERVICE})
 echo "clamonaccの状態(再開前) = ${STATUS_CLAMONACC_PRE_AFTER_SCAN}" >> ${LOGFILE} 2>&1
 if [ "${STATUS_CLAMONACC_PRE_AFTER_SCAN}" != "${STATUS_ACTIVE}" ]; then
 echo "clamonaccの開始" >> ${LOGFILE} 2>&1
 systemctl restart clamonacc
-STATUS_CLAMONACC_POST_AFTER_SCAN=$(systemctl is-active clamonacc)
+STATUS_CLAMONACC_POST_AFTER_SCAN=$(systemctl is-active ${ON_ACCESS_SCAN_SERVICE})
 echo "clamonaccの状態(再開後) = ${STATUS_CLAMONACC_POST_AFTER_SCAN}" >> ${LOGFILE} 2>&1
 if [ "${STATUS_CLAMONACC_POST_AFTER_SCAN}" != "${STATUS_ACTIVE}" ]; then
 delete_lock_and_exit $_lockfile "clamonaccの開始に失敗しました。終了します。" ${LOGFILE} 8
 fi
 fi
-
 wait_2_min
+fi
 
 echo "オンアクセススキャンの再開を完了。" >> ${LOGFILE} 2>&1
 
