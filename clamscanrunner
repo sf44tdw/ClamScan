@@ -43,10 +43,29 @@ done
 
 shift $((OPTIND - 1))
 
-LOGDIR=""
-LOGDIR="/var/log/clamav-scan-log"
-LOGFILE=""
-LOGFILE="${LOGDIR}/`date +%Y%m%d%H%M%S`.log"
+# 除外パスリストの読み込み。
+EXCLUDELIST="/etc/clamscan.exclude"
+if [ -s "${EXCLUDELIST}" ]; then
+  for i in `cat "${EXCLUDELIST}"`
+  do
+    if [ $(echo "${i}"|grep \/$) ]; then
+      i=`echo "${i}"|sed -e 's/^\([^ ]*\)\/$/\1/p' -e d`
+      EXCLUDEOPT="${EXCLUDEOPT} --exclude-dir=^$i"
+    else
+      EXCLUDEOPT="${EXCLUDEOPT} --exclude=^$i"
+    fi
+  done
+fi
+
+readonly ISODIR="/var/clamav-isolate-file"
+
+if [ ! -e "${ISODIR}" ]; then
+`mkdir -p -m 644 "${ISODIR}"`
+fi
+
+
+readonly LOGDIR="/var/log/clamav-scan-log"
+readonly LOGFILE="${LOGDIR}/`date +%Y%m%d%H%M%S`.log"
 
 if [ ! -e "${LOGDIR}" ]; then
 `mkdir -p -m 755 "${LOGDIR}"`
@@ -151,8 +170,8 @@ echo `date +%Y%m%d%H%M%S` >>"${LOGFILE}"
 
 # virus scan
 #感染したファイルのみログに記載する。
-#感染したファイルは削除する。
-nice -n 20 clamscan / -r --infected --remove --exclude-dir='/sys|/proc|/dev' >> ${LOGFILE} 2>&1 || delete_lock_and_exit $_lockfile "clamscanに失敗しました。終了します。" ${LOGFILE} 6
+#感染したファイルは隔離する。
+nice -n 20 clamscan / -r --infected --move=${ISODIR} ${EXCLUDEOPT} >> ${LOGFILE} 2>&1 || delete_lock_and_exit $_lockfile "clamscanに失敗しました。終了します。" ${LOGFILE} 6
 
 #再開の際は、ステータスがactiveでないなら再始動を試みる。
 

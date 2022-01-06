@@ -19,6 +19,11 @@ systemctl daemon-reload
 
 ./registrationtodaily.sh
 
+echo '/dev' > /etc/clamscan.exclude
+echo '/proc' >> /etc/clamscan.exclude
+echo '/sys' >> /etc/clamscan.exclude
+chmod 644 /etc/clamscan.exclude
+
 sesearch -b antivirus_can_scan_system -AC
 
 ./allowselinux.sh
