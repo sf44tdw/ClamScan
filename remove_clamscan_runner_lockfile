@@ -1,5 +1,5 @@
 #!/bin/bash
-PROCNAME="{$1}"
+PROCNAME="${1}"
 
 if [ -z "${PROCNAME}" ]; then
  echo "String Error."
