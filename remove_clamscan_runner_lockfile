@@ -1,7 +1,13 @@
 #!/bin/bash
-PROCNAME="${$1}"
-LOCKFILE="/tmp/${PROCNAME}*.lock"
-  ps=`ps aux | grep ${PROCNAME} | grep -v grep | wc -l`
+PROCNAME="{$1}"
+
+if [ -z "${PROCNAME}" ]; then
+ echo "String Error."
+ exit 1
+fi
+
+LOCKFILE="/tmp/${PROCNAME}.lock"
+ps=`ps aux | grep ${PROCNAME} | grep -v grep | wc -l`
   if [ $ps -eq 0 ]; then # 対象プロセスが存在しない場合
     rm -f "${LOCKFILE}"
     exit 0
