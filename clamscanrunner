@@ -2,6 +2,9 @@
 
 . /root/.bash_profile
 
+#スキャナ
+readonly SCANNER="clamscan"
+
 #サービスが起動中のステータスをあらわす文字列。
 readonly STATUS_ACTIVE="active"
 #サービスが停止中のステータスをあらわす文字列。
@@ -92,13 +95,24 @@ echo "dev=${Dev}" >>"${LOGFILE}"
 fi
 fi
 
+#制限が有効で、clamscanが既に実行中だった場合、起動しない。
+count=`ps -ef | grep ${SCANNER} | grep -v grep | wc -l`
+if [ "${ENABLE_f}" != "t" ]; then  
+if [ ${count} = 0 ]; then
+else
+  echo 'スキャナが起動中です。終了します。'
+  exit 3
+fi
+fi
+
+
 #多重起動防止機講
 # 制限が有効で、同じ名前のプロセスが起動していたら起動しない。
 _lockfile="/tmp/`basename $0`.lock"
 if [ "${ENABLE_f}" = "t" ]; then  
 rm -f $_lockfile
 fi
-ln -s /dummy $_lockfile 2> /dev/null || { echo 'Cannot run multiple instance.'  >>"${LOGFILE}"; exit 9; }
+ln -s /dummy $_lockfile 2> /dev/null || { echo 'このコマンドはすでに起動中です。'  >>"${LOGFILE}"; exit 9; }
 trap "rm -f $_lockfile; exit" 1 2 3 15
 
 # ファイル更新日時が5000日を越えたログファイルを削除
@@ -171,7 +185,7 @@ echo `date +%Y%m%d%H%M%S` >>"${LOGFILE}"
 # virus scan
 #感染したファイルのみログに記載する。
 #感染したファイルは隔離する。
-nice -n 20 clamscan / -r --infected --move=${ISODIR} ${EXCLUDEOPT} >> ${LOGFILE} 2>&1 || delete_lock_and_exit $_lockfile "clamscanに失敗しました。終了します。" ${LOGFILE} 6
+$(nice -n 20 ${SCANNER} / -r --infected --move=${ISODIR} ${EXCLUDEOPT} >> ${LOGFILE} 2>&1 || delete_lock_and_exit $_lockfile "clamscanに失敗しました。終了します。" ${LOGFILE} 6)
 
 #再開の際は、ステータスがactiveでないなら再始動を試みる。
 
