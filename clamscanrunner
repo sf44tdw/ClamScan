@@ -5,10 +5,15 @@
 #スキャナ
 readonly SCANNER="clamscan"
 
+#このスクリプトの名前。
+readonly MY_NAME=$(basename $0)
+
 #サービスが起動中のステータスをあらわす文字列。
 readonly STATUS_ACTIVE="active"
+
 #サービスが停止中のステータスをあらわす文字列。
 readonly STATUS_INACTIVE="inactive"
+
 #サービスが有効の時の文字列。
 readonly STATUS_ENABLED="enabled"
 
@@ -96,10 +101,9 @@ fi
 fi
 
 #制限が有効で、clamscanが既に実行中だった場合、起動しない。
-count=`ps -ef | grep ${SCANNER} | grep -v grep | wc -l`
-if [ "${ENABLE_f}" != "t" ]; then  
-if [ ${count} = 0 ]; then
-else
+if [ "${ENABLE_f}" != "t" ]; then
+count=$(ps -ef | grep "${SCANNER}" | grep -v grep | grep -v "${MY_NAME}" | wc -l)
+if [ "${count}" != 0 ]; then
   echo 'スキャナが起動中です。終了します。'
   exit 3
 fi
@@ -108,7 +112,7 @@ fi
 
 #多重起動防止機講
 # 制限が有効で、同じ名前のプロセスが起動していたら起動しない。
-_lockfile="/tmp/`basename $0`.lock"
+_lockfile="/tmp/${MY_NAME}.lock"
 if [ "${ENABLE_f}" = "t" ]; then  
 rm -f $_lockfile
 fi
