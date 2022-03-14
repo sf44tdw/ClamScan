@@ -52,7 +52,7 @@ done
 shift $((OPTIND - 1))
 
 # 除外パスリストの読み込み。
-EXCLUDELIST="/etc/clamscan.exclude"
+readonly EXCLUDELIST="/etc/clamscan.exclude"
 if [ -s "${EXCLUDELIST}" ]; then
   for i in `cat "${EXCLUDELIST}"`
   do
