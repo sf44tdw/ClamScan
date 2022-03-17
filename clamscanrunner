@@ -63,26 +63,28 @@ done
 
 shift $((OPTIND - 1))
 
-# 除外パスリストの読み込み。
-readonly EXCLUDELIST="/etc/clamscan.exclude"
-if [ -s "${EXCLUDELIST}" ]; then
-  for i in `cat "${EXCLUDELIST}"`
-  do
-    if [ $(echo "${i}"|grep \/$) ]; then
-      i=`echo "${i}"|sed -e 's/^\([^ ]*\)\/$/\1/p' -e d`
-      EXCLUDEOPT="${EXCLUDEOPT} --exclude-dir=^$i"
-    else
-      EXCLUDEOPT="${EXCLUDEOPT} --exclude=^$i"
-    fi
-  done
-fi
-
 readonly ISODIR="/var/clamav-isolate-file"
 
 if [ ! -e "${ISODIR}" ]; then
 `mkdir -p -m 644 "${ISODIR}"`
 fi
 
+# 除外パスリストの読み込み。
+#ディレクトリは末尾に/。
+#ファイルは末尾に/なし。
+readonly EXCLUDELIST="/etc/clamscan.exclude"
+if [ -s "${EXCLUDELIST}" ]; then
+    EXCLUDEOPT="--exclude-dir=^$ISODIR"
+  for i in `cat "${EXCLUDELIST}"`
+  do
+    if [ $(echo "${i}"|grep \/$) ]; then
+      i=`echo "${i}"|sed -e 's/^\([^ ]*\)\/$/\1/p' -e d`
+      EXCLUDEOPT="${EXCLUDEOPT} --exclude-dir=^$i"
+    else
+      EXCLUDEOPT="${EXCLUDEOPT} --exclude=$i"
+    fi
+  done
+fi
 
 readonly LOGDIR="/var/log/clamav-scan-log"
 readonly LOGFILE="${LOGDIR}/`date +%Y%m%d%H%M%S`.log"
@@ -193,7 +195,7 @@ echo `date +%Y%m%d%H%M%S` >>"${LOGFILE}"
 # virus scan
 #感染したファイルのみログに記載する。
 #感染したファイルは隔離する。
-$(nice -n 20 "${SCANNER}" / -r --infected --move="${ISODIR}" "${EXCLUDEOPT}" >> "${LOGFILE}" 2>&1)
+$(nice -n 20 ${SCANNER} / -r --infected --move=${ISODIR} ${EXCLUDEOPT} >> ${LOGFILE} 2>&1)
 
 RET="${?}"
 if [ "${RET}" -ne 0 ]; then
