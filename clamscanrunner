@@ -137,12 +137,12 @@ echo `date +%Y%m%d%H%M%S` >>"${LOGFILE}"
 
 # DB update
 # epelからインストールの場合、freshclamのインストール時に、3時間ごとの自動更新が登録されるのであまり意味が無いが、念のため。
-$("${UPDATOR}" >> ${LOGFILE} 2>&1)
+$(${UPDATOR} >> ${LOGFILE} 2>&1)
 
 RET_FRESHCLAM="${?}"
 echo `date +%Y%m%d%H%M%S` >>"${LOGFILE}"
 if [ "${RET_FRESHCLAM}" -ne 0 ]; then
-  delete_lock_and_exit $_lockfile "freshclamの戻り値が${RET_FRESHCLAM}"です。終了します。" ${LOGFILE} 3
+  delete_lock_and_exit $_lockfile "freshclamの戻り値が${RET_FRESHCLAM}です。終了します。" ${LOGFILE} 3
 fi
 
 #clamdのメモリ消費量が大きいので、スキャン中はオンアクセススキャンを停止する。
