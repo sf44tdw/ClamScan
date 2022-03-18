@@ -12,7 +12,7 @@ chmod 755 "${ROCKFILE_ERASER_SRC}"
 cp -pf "${ROCKFILE_ERASER_SRC}" "${ROCKFILE_ERASER_SCRIPT_DEST}"
 echo "0 * * * * ${ROCKFILE_ERASER_SCRIPT_DEST} ${SCRIPT}" > "${ROCKFILE_ERASER_DEST}"
 chown root:root "${ROCKFILE_ERASER_DEST}"
-chmod 755 "${ROCKFILE_ERASER_DEST}"
+chmod 600 "${ROCKFILE_ERASER_DEST}"
 
 #root:rootかつ755変更。
 chown root:root ${SCRIPT_SRC}
