@@ -29,15 +29,6 @@ usage_exit() {
         exit 1
 }
 
-check_clamav_process_and_exit() {
-       local PROCESSNAME="${1}"
-       count=$(ps -ef | grep "${PROCESSNAME}" | grep -v grep | grep -v "${MY_NAME}" | wc -l)
-       if [ "${count}" != 0 ]; then
-         echo "${PROCESSNAME}が起動中です。終了します。"
-         exit 3
-       fi
-}
-
 delete_lock_and_exit() {
         echo "${2}_${4}" >>"${3}"
         rm "${1}"
@@ -117,8 +108,18 @@ fi
 
 #制限が有効で、clamscanもしくはfreshclamが既に実行中だった場合、起動しない。
 if [ "${ENABLE_f}" != "t" ]; then
-  check_clamav_process_and_exit "${UPDATOR}"
-  check_clamav_process_and_exit "${SCANNER}"
+  local PROCESSNAME="${1}"
+  count=$(ps -ef | grep "${UPDATOR}" | grep -v "${UPDATOR}-sleep"| grep -v grep | grep -v "${MY_NAME}" | wc -l)
+  if [ "${count}" != 0 ]; then
+    echo "${UPDATOR}が起動中です。終了します。" >> "${LOGFILE}"
+    exit 3
+  fi
+  count=$(ps -ef | grep "${SCANNER}" | grep -v grep | grep -v "${MY_NAME}" | wc -l)
+  if [ "${count}" != 0 ]; then
+    echo "${SCANNER}が起動中です。終了します。" >> "${LOGFILE}"
+    exit 3
+  fi
+
 fi
 
 
@@ -138,7 +139,7 @@ find ${LOGDIR} -name "*.log" -type f -mtime +${PARAM_DATE_NUM} -exec rm -f {} \;
 echo `date +%Y%m%d%H%M%S` >>"${LOGFILE}"
 
 # DB update
-# epelからインストールの場合、freshclamのインストール時に、3時間ごとの自動更新が登録されるのであまり意味が無いが、念のため。
+# epelからインストールの場合、freshclamのインストール時に、3時間ごとの自動更新(freshclam-sleep)が登録されるのであまり意味が無いが、念のため。
 $(${UPDATOR} >> ${LOGFILE} 2>&1)
 
 RET_FRESHCLAM="${?}"
