@@ -108,7 +108,6 @@ fi
 
 #制限が有効で、clamscanもしくはfreshclamが既に実行中だった場合、起動しない。
 if [ "${ENABLE_f}" != "t" ]; then
-  local PROCESSNAME="${1}"
   count=$(ps -ef | grep "${UPDATOR}" | grep -v "${UPDATOR}-sleep"| grep -v grep | grep -v "${MY_NAME}" | wc -l)
   if [ "${count}" != 0 ]; then
     echo "${UPDATOR}が起動中です。終了します。" >> "${LOGFILE}"
