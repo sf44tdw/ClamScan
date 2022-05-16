@@ -90,7 +90,7 @@ echo `date +%Y%m%d%H%M%S` >>"${LOGFILE}"
 
 if [ "${ENABLE_f}" != "t" ]; then  
  #今の時間(何時?)
- NowHour=`date +%k`
+ NowHour=$(date +%-H)
  #割る数
  Dev=1
 
