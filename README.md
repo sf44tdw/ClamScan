@@ -19,8 +19,9 @@ systemctl daemon-reload
 yum -y install clamav clamav-update
 
 cd && git clone https://github.com/sf44tdw/ClamScanRunner.git
-
 cd ClamScanRunner
+
+./initfreshclam.sh
 
 #リアルタイムスキャンを使いたい場合のみ。
 ./initclamd.sh

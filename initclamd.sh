@@ -6,14 +6,6 @@ ln -s /dummy ${_lockfile} 2> /dev/null || { echo 'Cannot run multiple instance.'
 trap "rm ${_lockfile}; exit" 1 2 3 15
 
 
-FRESHCLAM_CONFIG_FILE_NAME="/etc/freshclam.conf"
-
-cp -a ${FRESHCLAM_CONFIG_FILE_NAME}{,.`date +%Y%m%d%H%M%S`.bak} || exit 1
-sed -i '/^Example/s/^/#/' ${FRESHCLAM_CONFIG_FILE_NAME}
-sed -i 's/^#NotifyClamd \/path\/to\/clamd.conf/NotifyClamd \/etc\/clamd.d\/scan.conf/g' ${FRESHCLAM_CONFIG_FILE_NAME}
-freshclam
-
-
 CLAMD_CONFIG_FILE_NAME="/etc/clamd.d/scan.conf"
 cp -a ${CLAMD_CONFIG_FILE_NAME}{,.`date +%Y%m%d%H%M%S`.bak}|| exit 2
 sed -i '/^Example/s/^/#/' ${CLAMD_CONFIG_FILE_NAME}
