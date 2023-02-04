@@ -38,3 +38,8 @@ sesearch -b antivirus_can_scan_system -AC
 #リアルタイムスキャンを使いたい場合のみ。
 ./setrealtimescan.sh
 
+
+#スキャン結果ディレクトリを必要なユーザのホームにリンク。
+./clamscanrunner
+#ここで必要なユーザに遷移
+cd ~/ && ln -s /var/log/clamav-scan-log
