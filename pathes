@@ -1,5 +1,7 @@
-
-THIS_DIR=$(cd $(dirname $0);pwd)
+THIS_DIR=$(
+	cd $(dirname $0)
+	pwd
+)
 SCRIPT="clamscanrunner"
 ROCKFILE_ERASER="remove_clamscan_runner_lockfile"
 
@@ -13,6 +15,3 @@ DAILY_DEST="${DAILY_TARGET_DIR}/${SCRIPT}"
 ROCKFILE_ERASER_SRC="${THIS_DIR}/${ROCKFILE_ERASER}"
 ROCKFILE_ERASER_SCRIPT_DEST="${ROCKFILE_ERASER_SCRIPT_DIR}/${ROCKFILE_ERASER}"
 ROCKFILE_ERASER_DEST="${CRON_DIR}/${ROCKFILE_ERASER}"
-
-
-
