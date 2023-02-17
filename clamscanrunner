@@ -127,7 +127,7 @@ ln -s /dummy $_lockfile 2>/dev/null || {
 	echo 'このコマンドはすでに起動中です。' >>"${LOGFILE}"
 	exit 9
 }
-trap "rm -f $_lockfile; exit" 1 2 3 15
+trap 'rm "${_lockfile}"; exit' SIGHUP SIGINT SIGQUIT SIGTERM
 
 # ファイル更新日時が5000日を越えたログファイルを削除
 readonly PARAM_DATE_NUM=5000
