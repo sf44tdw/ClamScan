@@ -1,0 +1,247 @@
+#!/bin/bash
+
+. /root/.bash_profile
+
+#アップデータ
+readonly UPDATOR="freshclam"
+
+#スキャナ
+readonly SCANNER="clamscan"
+
+#このスクリプトの名前。
+readonly MY_NAME=$(basename $0)
+
+#サービスが起動中のステータスをあらわす文字列。
+readonly STATUS_ACTIVE="active"
+
+#サービスが停止中のステータスをあらわす文字列。
+readonly STATUS_INACTIVE="inactive"
+
+#サービスが有効の時の文字列。
+readonly STATUS_ENABLED="enabled"
+
+# rootのcrontabに起動設定を書くなどして、rootで動くようにしないとログが残らない。
+
+usage_exit() {
+	echo "Usage: $0 [-f]" 1>&2
+	echo 'fleshclamとclamscanを実行する。-f 設定(多重起動防止と実行時間の制限を無視する。)' 1>&2
+	exit 1
+}
+
+delete_lock_and_exit() {
+	echo "${2}_${4}" >>"${3}"
+	rm "${1}"
+	exit "${4}"
+}
+
+wait_2_min() {
+	sleep 120
+}
+
+ENABLE_f="f"
+
+while getopts "f" OPT; do
+	case $OPT in
+	f)
+		ENABLE_f="t"
+		;;
+	: | \?)
+		usage_exit
+		;;
+	esac
+done
+
+shift $((OPTIND - 1))
+
+readonly ISODIR="/var/clamav-isolate-file"
+
+if [ ! -e "${ISODIR}" ]; then
+	$(mkdir -p -m 644 "${ISODIR}")
+fi
+
+# 除外パスリストの読み込み。
+#ディレクトリは末尾に/。
+#ファイルは末尾に/なし。
+readonly EXCLUDELIST="/etc/clamscan.exclude"
+if [ -s "${EXCLUDELIST}" ]; then
+	EXCLUDEOPT="--exclude-dir=^$ISODIR"
+	for i in $(cat "${EXCLUDELIST}"); do
+		if [ $(echo "${i}" | grep \/$) ]; then
+			i=$(echo "${i}" | sed -e 's/^\([^ ]*\)\/$/\1/p' -e d)
+			EXCLUDEOPT="${EXCLUDEOPT} --exclude-dir=^$i"
+		else
+			EXCLUDEOPT="${EXCLUDEOPT} --exclude=$i"
+		fi
+	done
+fi
+
+readonly LOGDIR="/var/log/clamav-scan-log"
+readonly LOGFILE="${LOGDIR}/$(date +%Y%m%d%H%M%S).log"
+
+if [ ! -e "${LOGDIR}" ]; then
+	$(mkdir -p -m 755 "${LOGDIR}")
+fi
+
+touch "${LOGFILE}"
+
+echo $(date +%Y%m%d%H%M%S) >>"${LOGFILE}"
+
+if [ "${ENABLE_f}" != "t" ]; then
+	#今の時間(何時?)
+	NowHour=$(date +%-H)
+	#割る数
+	Dev=1
+
+	echo "now=${NowHour}" >>"${LOGFILE}"
+	echo "dev=${Dev}" >>"${LOGFILE}"
+
+	mod=$((${NowHour} % ${Dev}))
+	#制限が有効で、割る数で割り切れない時間なら起動しない。
+	if [ ! "0" -eq ${mod} ]; then
+		exit 2
+	fi
+fi
+
+#制限が有効で、clamscanもしくはfreshclamが既に実行中だった場合、起動しない。
+if [ "${ENABLE_f}" != "t" ]; then
+	count=$(ps -ef | grep "${UPDATOR}" | grep -v "${UPDATOR}-sleep" | grep -v grep | grep -v "${MY_NAME}" | wc -l)
+	if [ "${count}" != 0 ]; then
+		echo "${UPDATOR}が起動中です。終了します。" >>"${LOGFILE}"
+		exit 3
+	fi
+	count=$(ps -ef | grep "${SCANNER}" | grep -v grep | grep -v "${MY_NAME}" | wc -l)
+	if [ "${count}" != 0 ]; then
+		echo "${SCANNER}が起動中です。終了します。" >>"${LOGFILE}"
+		exit 3
+	fi
+
+fi
+
+#多重起動防止機講
+# 制限が有効で、同じ名前のプロセスが起動していたら起動しない。
+_lockfile="/tmp/${MY_NAME}.lock"
+if [ "${ENABLE_f}" = "t" ]; then
+	rm -f $_lockfile
+fi
+ln -s /dummy $_lockfile 2>/dev/null || {
+	echo 'このコマンドはすでに起動中です。' >>"${LOGFILE}"
+	exit 9
+}
+trap 'rm "${_lockfile}"; exit' SIGHUP SIGINT SIGQUIT SIGTERM
+
+# ファイル更新日時が5000日を越えたログファイルを削除
+readonly PARAM_DATE_NUM=5000
+find ${LOGDIR} -name "*.log" -type f -mtime +${PARAM_DATE_NUM} -exec rm -f {} \;
+
+echo $(date +%Y%m%d%H%M%S) >>"${LOGFILE}"
+
+# DB update
+# epelからインストールの場合、freshclamのインストール時に、3時間ごとの自動更新(freshclam-sleep)が登録されるのであまり意味が無いが、念のため。
+$(${UPDATOR} >>${LOGFILE} 2>&1)
+
+RET_FRESHCLAM="${?}"
+echo $(date +%Y%m%d%H%M%S) >>"${LOGFILE}"
+if [ "${RET_FRESHCLAM}" -ne 0 ]; then
+	delete_lock_and_exit $_lockfile "freshclamの戻り値が${RET_FRESHCLAM}です。終了します。" ${LOGFILE} 3
+fi
+
+#clamdのメモリ消費量が大きいので、スキャン中はオンアクセススキャンを停止する。
+#サービスが有効では無い場合は何もしない。
+
+readonly ON_ACCESS_SCAN_SERVICE='clamonacc'
+readonly CLAMD_SERVICE='clamd@scan'
+
+#関連するサービスの有効性を確認する。
+ON_ACCESS_ENABLED=$(systemctl is-enabled ${ON_ACCESS_SCAN_SERVICE})
+CLAMD_ENABLED=$(systemctl is-enabled ${CLAMD_SERVICE})
+
+echo "オンアクセススキャンを停止する。" >>${LOGFILE} 2>&1
+if [ "${ON_ACCESS_ENABLED}" = "${STATUS_ENABLED}" ]; then
+	STATUS_CLAMONACC_PRE_BEFORE_SCAN=$(systemctl is-active ${ON_ACCESS_SCAN_SERVICE})
+	echo "clamonaccの状態(停止前) = ${STATUS_CLAMONACC_PRE_BEFORE_SCAN}" >>${LOGFILE} 2>&1
+	if [ "${STATUS_CLAMONACC_PRE_BEFORE_SCAN}" = "${STATUS_ACTIVE}" ]; then
+		echo "clamonaccの停止" >>${LOGFILE} 2>&1
+		systemctl stop clamonacc
+		STATUS_CLAMONACC_POST_BEFORE_SCAN=$(systemctl is-active ${ON_ACCESS_SCAN_SERVICE})
+		echo "clamonaccの状態(停止後) = ${STATUS_CLAMONACC_POST_BEFORE_SCAN}" >>${LOGFILE} 2>&1
+		if [ "${STATUS_CLAMONACC_POST_BEFORE_SCAN}" = "${STATUS_ACTIVE}" ]; then
+			delete_lock_and_exit $_lockfile "clamonaccが停止していません。終了します。" ${LOGFILE} 4
+		fi
+	fi
+	wait_2_min
+fi
+
+if [ "${CLAMD_ENABLED}" = "${STATUS_ENABLED}" ]; then
+	STATUS_CLAMD_PRE_BEFORE_SCAN=$(systemctl is-active ${CLAMD_SERVICE})
+	echo "clamdの状態(停止前) = ${STATUS_CLAMD_PRE_BEFORE_SCAN}" >>${LOGFILE} 2>&1
+	if [ "${STATUS_CLAMD_PRE_BEFORE_SCAN}" = "${STATUS_ACTIVE}" ]; then
+		echo "clamdの停止" >>${LOGFILE} 2>&1
+		systemctl stop clamd@scan
+		STATUS_CLAMD_POST_BEFORE_SCAN=$(systemctl is-active ${CLAMD_SERVICE})
+		echo "clamdの状態(停止後) = ${STATUS_CLAMD_POST_BEFORE_SCAN}" >>${LOGFILE} 2>&1
+		if [ "${STATUS_CLAMD_POST_BEFORE_SCAN}" = "${STATUS_ACTIVE}" ]; then
+			delete_lock_and_exit $_lockfile "clamdが停止していません。終了します。" ${LOGFILE} 5
+		fi
+	fi
+	wait_2_min
+fi
+
+echo "オンアクセススキャンの停止を完了。" >>${LOGFILE} 2>&1
+
+echo $(date +%Y%m%d%H%M%S) >>"${LOGFILE}"
+
+# virus scan
+#感染したファイルのみログに記載する。
+#感染したファイルは隔離する。
+$(nice -n 20 ${SCANNER} / -r --infected --move=${ISODIR} ${EXCLUDEOPT} >>${LOGFILE} 2>&1)
+
+RET="${?}"
+if [ "${RET}" -ne 0 ]; then
+	echo $(date +%Y%m%d%H%M%S) >>"${LOGFILE}"
+	echo "clamscanの戻り値が${RET}"です。 >>"${LOGFILE}"
+fi
+
+#再開の際は、ステータスがactiveでないなら再始動を試みる。
+
+echo $(date +%Y%m%d%H%M%S) >>"${LOGFILE}"
+
+echo "オンアクセススキャンを再開する。" >>${LOGFILE} 2>&1
+
+if [ "${CLAMD_ENABLED}" = "${STATUS_ENABLED}" ]; then
+	STATUS_CLAMD_PRE_AFTER_SCAN=$(systemctl is-active ${CLAMD_SERVICE})
+	echo "clamdの状態(再開前前) = ${STATUS_CLAMD_PRE_AFTER_SCAN}" >>${LOGFILE} 2>&1
+	if [ "${STATUS_CLAMD_PRE_AFTER_SCAN}" != "${STATUS_ACTIVE}" ]; then
+		echo "clamdの開始" >>${LOGFILE} 2>&1
+		systemctl restart clamd@scan
+		STATUS_CLAMD_POST_AFTER_SCAN=$(systemctl is-active ${CLAMD_SERVICE})
+		echo "clamdの状態(再開後) = ${STATUS_CLAMD_POST_AFTER_SCAN}" >>${LOGFILE} 2>&1
+		if [ "${STATUS_CLAMD_POST_AFTER_SCAN}" != "${STATUS_ACTIVE}" ]; then
+			delete_lock_and_exit $_lockfile "clamdの開始に失敗しました。終了します。" ${LOGFILE} 7
+		fi
+	fi
+	wait_2_min
+fi
+
+if [ "${ON_ACCESS_ENABLED}" = "${STATUS_ENABLED}" ]; then
+	STATUS_CLAMONACC_PRE_AFTER_SCAN=$(systemctl is-active ${ON_ACCESS_SCAN_SERVICE})
+	echo "clamonaccの状態(再開前) = ${STATUS_CLAMONACC_PRE_AFTER_SCAN}" >>${LOGFILE} 2>&1
+	if [ "${STATUS_CLAMONACC_PRE_AFTER_SCAN}" != "${STATUS_ACTIVE}" ]; then
+		echo "clamonaccの開始" >>${LOGFILE} 2>&1
+		systemctl restart clamonacc
+		STATUS_CLAMONACC_POST_AFTER_SCAN=$(systemctl is-active ${ON_ACCESS_SCAN_SERVICE})
+		echo "clamonaccの状態(再開後) = ${STATUS_CLAMONACC_POST_AFTER_SCAN}" >>${LOGFILE} 2>&1
+		if [ "${STATUS_CLAMONACC_POST_AFTER_SCAN}" != "${STATUS_ACTIVE}" ]; then
+			delete_lock_and_exit $_lockfile "clamonaccの開始に失敗しました。終了します。" ${LOGFILE} 8
+		fi
+	fi
+	wait_2_min
+fi
+
+echo "オンアクセススキャンの再開を完了。" >>${LOGFILE} 2>&1
+
+echo $(date +%Y%m%d%H%M%S) >>"${LOGFILE}"
+
+#ログファイルの内容を表示
+cat ${LOGFILE}
+
+rm -f $_lockfile
