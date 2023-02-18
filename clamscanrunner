@@ -8,9 +8,6 @@ readonly UPDATOR="freshclam"
 #スキャナ
 readonly SCANNER="clamscan"
 
-#このスクリプトの名前。
-readonly MY_NAME=$(basename "${0}")
-
 #サービスが起動中のステータスをあらわす文字列。
 readonly STATUS_ACTIVE="active"
 
@@ -89,9 +86,9 @@ if [ -s "${EXCLUDELIST}" ]; then
 	for i in $(cat "${EXCLUDELIST}"); do
 		if [ "$(echo "${i}" | grep \/$)" ]; then
 			i=$(echo "${i}" | sed -e 's/^\([^ ]*\)\/$/\1/p' -e d)
-			EXCLUDEOPT+=("--exclude-dir=^$i")
+			EXCLUDEOPT+=("--exclude-dir=^${i}")
 		else
-			EXCLUDEOPT+=("--exclude=$i")
+			EXCLUDEOPT+=("--exclude=${i}")
 		fi
 	done
 fi
@@ -130,11 +127,11 @@ fi
 
 #制限が有効で、clamscanもしくはfreshclamが既に実行中だった場合、起動しない。
 if [ "${ENABLE_f}" != "t" ]; then
-	count=$(pgrep "${UPDATOR}" | grep -v "${UPDATOR}-sleep" | grep -v grep | grep -v "${MY_NAME}" | wc -l)
+	count=$(pgrep "${UPDATOR}" | wc -l)
 	if [ "${count}" != 0 ]; then
 		delete_lock_and_exit "${UPDATOR}が起動中です。終了します。" "${LOGFILE}" 3
 	fi
-	count=$(pgrep "${SCANNER}" | grep -v grep | grep -v "${MY_NAME}" | wc -l)
+	count=$(pgrep "${SCANNER}" | wc -l)
 	if [ "${count}" != 0 ]; then
 		delete_lock_and_exit "${SCANNER}が起動中です。終了します。" "${LOGFILE}" 3
 	fi
