@@ -127,14 +127,16 @@ fi
 
 #制限が有効で、clamscanもしくはfreshclamが既に実行中だった場合、起動しない。
 if [ "${ENABLE_f}" != "t" ]; then
-	pgrep "${UPDATOR}"
-	readonly upcount="${?}"
-	if [ "${upcount}" = 0 ]; then
+	readonly UP_LIST=$(pgrep -l "${UPDATOR}" | grep -v grep | grep -v "${MY_NAME}")
+	readonly UP_COUNT=$(echo "${UP_LIST}" | grep -v '^\s*$' | wc -l)
+	#echo "UL_${UP_LIST}_UC_${UP_COUNT}" >>"${LOGFILE}"
+	if [ "${UP_COUNT}" != 0 ]; then
 		delete_lock_and_exit "${UPDATOR}が起動中です。終了します。" "${LOGFILE}" 3
 	fi
-	pgrep "${SCANNER}"
-	readonly scancount="${?}"
-	if [ "${scancount}" = 0 ]; then
+	readonly SCAN_LIST=$(pgrep -l "${SCANNER}" | grep -v grep | grep -v "${MY_NAME}")
+	readonly SCAN_COUNT=$(echo "${SCAN_LIST}" | grep -v '^\s*$' | wc -l)
+	#echo "SL_${SCAN_LIST}_SC_${SCAN_COUNT}" >>"${LOGFILE}"
+	if [ "${SCAN_COUNT}" != 0 ]; then
 		delete_lock_and_exit "${SCANNER}が起動中です。終了します。" "${LOGFILE}" 3
 	fi
 
