@@ -31,7 +31,12 @@ chmod 644 /etc/clamscan.exclude
 #リアルタイムスキャンを使いたい場合のみ。
 ./initclamd.sh
 
+#共通
 sesearch -b antivirus_can_scan_system -AC
+mkdir -m 644 -p /var/clamav-isolate-file 
+semanage fcontext -a -t antivirus_tmp_t '/var/clamav-isolate-file/'
+restorecon -v '/var/clamav-isolate-file/'
+
 
 #リアルタイムスキャンを使いたい場合のみ。
 ./clamscand_allow_selinux.sh
