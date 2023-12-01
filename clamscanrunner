@@ -165,18 +165,18 @@ readonly ON_ACCESS_SCAN_SERVICE='clamonacc'
 readonly CLAMD_SERVICE='clamd@scan'
 
 #関連するサービスの有効性を確認する。
-readonly ON_ACCESS_ENABLED=$(systemctl is-enabled ${ON_ACCESS_SCAN_SERVICE})
-readonly CLAMD_ENABLED=$(systemctl is-enabled ${CLAMD_SERVICE})
+readonly ON_ACCESS_ENABLED=$(systemctl is-enabled ${ON_ACCESS_SCAN_SERVICE} >>"${LOGFILE}" 2>&1)
+readonly CLAMD_ENABLED=$(systemctl is-enabled ${CLAMD_SERVICE} >>"${LOGFILE}" 2>&1)
 
 echo "オンアクセススキャンを停止する。" >>"${LOGFILE}"
 if [ "${ON_ACCESS_ENABLED}" = "${STATUS_ENABLED}" ]; then
 	readonly STATUS_CLAMONACC_PRE_BEFORE_SCAN=$(systemctl is-active ${ON_ACCESS_SCAN_SERVICE})
-	echo "clamonaccの状態(停止前) = ${STATUS_CLAMONACC_PRE_BEFORE_SCAN}" >>"${LOGFILE}"
+	echo "${ON_ACCESS_SCAN_SERVICE}の状態(停止前) = ${STATUS_CLAMONACC_PRE_BEFORE_SCAN}" >>"${LOGFILE}"
 	if [ "${STATUS_CLAMONACC_PRE_BEFORE_SCAN}" = "${STATUS_ACTIVE}" ]; then
 		echo "${ON_ACCESS_SCAN_SERVICE}の停止" >>"${LOGFILE}"
 		systemctl stop "${ON_ACCESS_SCAN_SERVICE}"
 		readonly STATUS_CLAMONACC_POST_BEFORE_SCAN=$(systemctl is-active ${ON_ACCESS_SCAN_SERVICE})
-		echo "clamonaccの状態(停止後) = ${STATUS_CLAMONACC_POST_BEFORE_SCAN}" >>"${LOGFILE}"
+		echo "${ON_ACCESS_SCAN_SERVICE}の状態(停止後) = ${STATUS_CLAMONACC_POST_BEFORE_SCAN}" >>"${LOGFILE}"
 		if [ "${STATUS_CLAMONACC_POST_BEFORE_SCAN}" = "${STATUS_ACTIVE}" ]; then
 			delete_lock_and_exit "${ON_ACCESS_SCAN_SERVICE}が停止していません。終了します。" "${LOGFILE}" 4
 		fi
@@ -186,12 +186,12 @@ fi
 
 if [ "${CLAMD_ENABLED}" = "${STATUS_ENABLED}" ]; then
 	readonly STATUS_CLAMD_PRE_BEFORE_SCAN=$(systemctl is-active ${CLAMD_SERVICE})
-	echo "clamdの状態(停止前) = ${STATUS_CLAMD_PRE_BEFORE_SCAN}" >>"${LOGFILE}"
+	echo "${CLAMD_SERVICE}の状態(停止前) = ${STATUS_CLAMD_PRE_BEFORE_SCAN}" >>"${LOGFILE}"
 	if [ "${STATUS_CLAMD_PRE_BEFORE_SCAN}" = "${STATUS_ACTIVE}" ]; then
 		echo "${CLAMD_SERVICE}の停止" >>"${LOGFILE}"
 		systemctl stop "${CLAMD_SERVICE}"
 		readonly STATUS_CLAMD_POST_BEFORE_SCAN=$(systemctl is-active ${CLAMD_SERVICE})
-		echo "clamdの状態(停止後) = ${STATUS_CLAMD_POST_BEFORE_SCAN}" >>"${LOGFILE}"
+		echo "${CLAMD_SERVICE}の状態(停止後) = ${STATUS_CLAMD_POST_BEFORE_SCAN}" >>"${LOGFILE}"
 		if [ "${STATUS_CLAMD_POST_BEFORE_SCAN}" = "${STATUS_ACTIVE}" ]; then
 			delete_lock_and_exit "${CLAMD_SERVICE}が停止していません。終了します。" "${LOGFILE}" 5
 		fi
@@ -224,12 +224,12 @@ echo "オンアクセススキャンを再開する。" >>"${LOGFILE}"
 
 if [ "${CLAMD_ENABLED}" = "${STATUS_ENABLED}" ]; then
 	readonly STATUS_CLAMD_PRE_AFTER_SCAN=$(systemctl is-active ${CLAMD_SERVICE})
-	echo "clamdの状態(再開前前) = ${STATUS_CLAMD_PRE_AFTER_SCAN}" >>"${LOGFILE}"
+	echo "${CLAMD_SERVICE}の状態(再開前前) = ${STATUS_CLAMD_PRE_AFTER_SCAN}" >>"${LOGFILE}"
 	if [ "${STATUS_CLAMD_PRE_AFTER_SCAN}" != "${STATUS_ACTIVE}" ]; then
-		echo "clamdの開始" >>"${LOGFILE}" 2>&1
+		echo "${CLAMD_SERVICE}の開始" >>"${LOGFILE}" 2>&1
 		systemctl restart "${CLAMD_SERVICE}"
 		readonly STATUS_CLAMD_POST_AFTER_SCAN=$(systemctl is-active ${CLAMD_SERVICE})
-		echo "clamdの状態(再開後) = ${STATUS_CLAMD_POST_AFTER_SCAN}" >>"${LOGFILE}"
+		echo "${CLAMD_SERVICE}の状態(再開後) = ${STATUS_CLAMD_POST_AFTER_SCAN}" >>"${LOGFILE}"
 		if [ "${STATUS_CLAMD_POST_AFTER_SCAN}" != "${STATUS_ACTIVE}" ]; then
 			delete_lock_and_exit "${CLAMD_SERVICE}の開始に失敗しました。終了します。" "${LOGFILE}" 7
 		fi
@@ -239,12 +239,12 @@ fi
 
 if [ "${ON_ACCESS_ENABLED}" = "${STATUS_ENABLED}" ]; then
 	readonly STATUS_CLAMONACC_PRE_AFTER_SCAN=$(systemctl is-active ${ON_ACCESS_SCAN_SERVICE})
-	echo "clamonaccの状態(再開前) = ${STATUS_CLAMONACC_PRE_AFTER_SCAN}" >>"${LOGFILE}"
+	echo "${ON_ACCESS_SCAN_SERVICE}の状態(再開前) = ${STATUS_CLAMONACC_PRE_AFTER_SCAN}" >>"${LOGFILE}"
 	if [ "${STATUS_CLAMONACC_PRE_AFTER_SCAN}" != "${STATUS_ACTIVE}" ]; then
 		echo "${ON_ACCESS_SCAN_SERVICE}の開始" >>"${LOGFILE}"
 		systemctl restart "${ON_ACCESS_SCAN_SERVICE}"
 		readonly STATUS_CLAMONACC_POST_AFTER_SCAN=$(systemctl is-active ${ON_ACCESS_SCAN_SERVICE})
-		echo "clamonaccの状態(再開後) = ${STATUS_CLAMONACC_POST_AFTER_SCAN}" >>"${LOGFILE}"
+		echo "${ON_ACCESS_SCAN_SERVICE}の状態(再開後) = ${STATUS_CLAMONACC_POST_AFTER_SCAN}" >>"${LOGFILE}"
 		if [ "${STATUS_CLAMONACC_POST_AFTER_SCAN}" != "${STATUS_ACTIVE}" ]; then
 			delete_lock_and_exit "${ON_ACCESS_SCAN_SERVICE}の開始に失敗しました。終了します。" "${LOGFILE}" 8
 		fi
