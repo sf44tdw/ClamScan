@@ -165,8 +165,8 @@ readonly ON_ACCESS_SCAN_SERVICE='clamonacc'
 readonly CLAMD_SERVICE='clamd@scan'
 
 #関連するサービスの有効性を確認する。
-readonly ON_ACCESS_ENABLED=$(systemctl is-enabled ${ON_ACCESS_SCAN_SERVICE} >>"${LOGFILE}" 2>&1)
-readonly CLAMD_ENABLED=$(systemctl is-enabled ${CLAMD_SERVICE} >>"${LOGFILE}" 2>&1)
+readonly ON_ACCESS_ENABLED=$(systemctl is-enabled ${ON_ACCESS_SCAN_SERVICE} 2>>"${LOGFILE}")
+readonly CLAMD_ENABLED=$(systemctl is-enabled ${CLAMD_SERVICE} 2>>"${LOGFILE}")
 
 echo "オンアクセススキャンを停止する。" >>"${LOGFILE}"
 if [ "${ON_ACCESS_ENABLED}" = "${STATUS_ENABLED}" ]; then
