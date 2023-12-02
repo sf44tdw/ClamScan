@@ -84,7 +84,7 @@ readonly LOGDIR="/var/log/clamav-scan-log"
 readonly LOGFILE="${LOGDIR}/$(date +%Y%m%d%H%M%S).log"
 mkdir -p "${LOGDIR}" && chmod 755 "${LOGDIR}"
 
-echo "$(date +%Y%m%d%H%M%S)_START" >>"${LOGFILE}"
+echo "$(date +%Y%m%d%H%M%S)_開始します。" >>"${LOGFILE}"
 
 expr "${DEV_OPTARG}" + 1 >&/dev/null
 readonly RET_DEV_OPTARG_ISNUMERIC="${?}"
