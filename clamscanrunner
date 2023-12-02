@@ -43,7 +43,8 @@ function delete_lock_file_and_exit() {
 }
 
 function delete_lock_and_exit() {
-	echo "${1}_${3}" >>"${2}"
+	local -r YMD_VAL=$(date +%Y%m%d%H%M%S)
+	echo "${YMD_VAL}_${1}_${3}" >>"${2}"
 	delete_lock_file_and_exit "${3}"
 }
 
@@ -78,10 +79,17 @@ done
 
 shift $((OPTIND - 1))
 
+
+readonly LOGDIR="/var/log/clamav-scan-log"
+readonly LOGFILE="${LOGDIR}/$(date +%Y%m%d%H%M%S).log"
+mkdir -p "${LOGDIR}" && chmod 755 "${LOGDIR}"
+
+date +%Y%m%d%H%M%S >>"${LOGFILE}"
+
 expr "${DEV_OPTARG}" + 1 >&/dev/null
 readonly RET_DEV_OPTARG_ISNUMERIC="${?}"
 if [ "${RET_DEV_OPTARG_ISNUMERIC}" -ge 2 ] || [ "${DEV_OPTARG}" -lt 1 ] || [ "${DEV_OPTARG}" -gt 24  ]; then
-	echo "-dオプションで取得した値が異常です。取得した値=${DEV_OPTARG}" 1>&2
+	echo "-dオプションで取得した値が異常です。取得した値=${DEV_OPTARG}" >>"${LOGFILE}"
 	usage_exit
 fi
 
@@ -106,13 +114,7 @@ if [ -s "${EXCLUDELIST}" ]; then
 	done
 fi
 
-readonly LOGDIR="/var/log/clamav-scan-log"
-readonly LOGFILE="${LOGDIR}/$(date +%Y%m%d%H%M%S).log"
-
-mkdir -p "${LOGDIR}" && chmod 755 "${LOGDIR}"
-
 date +%Y%m%d%H%M%S >>"${LOGFILE}"
-
 if [ "${ENABLE_f}" = "t" ]; then
 	echo '-fオプションが有効です。' >>"${LOGFILE}"
 	if [ -f "${_lockfile}" ]; then
@@ -125,8 +127,10 @@ if [ "${ENABLE_f}" = "t" ]; then
 fi
 
 #ロックファイル生成。
+date +%Y%m%d%H%M%S >>"${LOGFILE}"
 ln -s /dummy "${_lockfile}" >/dev/null 2>&1 || {
-	echo 'Cannot run multiple instance.'
+	echo 'Cannot run multiple instance.' >>"${LOGFILE}"
+	date +%Y%m%d%H%M%S >>"${LOGFILE}"
 	#他のプロセスが起動中なのでロックファイルは削除しない。
 	exit 110
 }
@@ -152,6 +156,7 @@ if [ "${ENABLE_f}" != "t" ]; then
 fi
 
 #制限が有効で、clamscanもしくはfreshclamが既に実行中だった場合、起動しない。
+date +%Y%m%d%H%M%S >>"${LOGFILE}"
 if [ "${ENABLE_f}" != "t" ]; then
 	readonly UP_LIST=$(pgrep -l "${UPDATOR}" | grep -v grep | grep -v "${MY_NAME}")
 	readonly UP_COUNT=$(echo "${UP_LIST}" | grep -v '^\s*$' | wc -l)
