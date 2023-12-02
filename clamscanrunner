@@ -23,7 +23,7 @@ readonly STATUS_ENABLED="enabled"
 readonly MY_NAME=$(basename "${0}")
 
 #ロックファイルのパス
-_lockfile="/tmp/${MY_NAME}.lock"
+readonly _lockfile="/tmp/${MY_NAME}.lock"
 
 function delete_lock_file_and_exit() {
 	local -r EXIT_CODE="${1}"
@@ -106,6 +106,24 @@ if [ -s "${EXCLUDELIST}" ]; then
 	done
 fi
 
+readonly LOGDIR="/var/log/clamav-scan-log"
+readonly LOGFILE="${LOGDIR}/$(date +%Y%m%d%H%M%S).log"
+
+mkdir -p "${LOGDIR}" && chmod 755 "${LOGDIR}"
+
+date +%Y%m%d%H%M%S >>"${LOGFILE}"
+
+if [ "${ENABLE_f}" != "t" ]; then
+	echo '-fオプションが有効です。' >>"${LOGFILE}"
+	if [ -f "${_lockfile}" ]; then
+		echo 'ロックファイルを強制的に削除し、処理を継続します。' >>"${LOGFILE}"
+		date +%Y%m%d%H%M%S >>"${LOGFILE}"
+		rm -f "${_lockfile}" >>"${LOGFILE}" 2>&1
+		date +%Y%m%d%H%M%S >>"${LOGFILE}"
+		echo 'ロックファイルを強制的に削除しました。結果にかかわらず処理を続行します。' >>"${LOGFILE}"
+	fi
+fi
+
 #ロックファイル生成。
 ln -s /dummy "${_lockfile}" >/dev/null 2>&1 || {
 	echo 'Cannot run multiple instance.'
@@ -114,11 +132,6 @@ ln -s /dummy "${_lockfile}" >/dev/null 2>&1 || {
 }
 
 trap 'rm "${_lockfile}"; exit' SIGHUP SIGINT SIGQUIT SIGTERM
-
-readonly LOGDIR="/var/log/clamav-scan-log"
-readonly LOGFILE="${LOGDIR}/$(date +%Y%m%d%H%M%S).log"
-
-mkdir -p "${LOGDIR}" && chmod 755 "${LOGDIR}"
 
 date +%Y%m%d%H%M%S >>"${LOGFILE}"
 
