@@ -48,8 +48,10 @@ function delete_lock_and_exit() {
 }
 
 function usage_exit() {
-	echo "Usage: $0 [-f]" 1>&2
-	echo 'fleshclamとclamscanを実行する。-f 設定(多重起動防止と実行時間の制限を無視する。)' 1>&2
+	echo 'Usage: $0 [-f] [-d (1-24)] ' 1>&2
+	echo 'fleshclamとclamscanを実行する' 1>&2
+	echo '-f 設定(多重起動防止と実行時間の制限を無視する。)' 1>&2
+	echo '-d このスクリプトが実行された時間がこのオプションで指定された値で割り切れる場合にのみウイルススキャンを行う。規定値は1。範囲は1-24。' 1>&2
 	exit 1
 }
 
@@ -58,11 +60,15 @@ function wait_2_min() {
 }
 
 ENABLE_f="f"
+DEV_OPTARG="1"
 
-while getopts "f" OPT; do
+while getopts "fd:" OPT; do
 	case $OPT in
 	f)
 		ENABLE_f="t"
+		;;
+	d)
+		DEV_OPTARG="${OPTARG}"
 		;;
 	: | \?)
 		usage_exit
@@ -71,6 +77,13 @@ while getopts "f" OPT; do
 done
 
 shift $((OPTIND - 1))
+
+expr "${DEV_OPTARG}" + 1 >&/dev/null
+readonly RET_DEV_OPTARG_ISNUMERIC="${?}"
+if [ "${RET_DEV_OPTARG_ISNUMERIC}" -ge 2 ] || [ "${DEV_OPTARG}" -lt 1 ] || [ "${DEV_OPTARG}" -gt 24  ]; then
+	echo "-dオプションで取得した値が異常です。取得した値=${DEV_OPTARG}" 1>&2
+	usage_exit
+fi
 
 readonly ISODIR="/var/clamav-isolate-file"
 
@@ -113,7 +126,7 @@ if [ "${ENABLE_f}" != "t" ]; then
 	#今の時間(何時?)
 	NowHour=$(date +%-H)
 	#割る数
-	readonly Dev=1
+	readonly Dev="${DEV_OPTARG}"
 
 	echo "now=${NowHour}" >>"${LOGFILE}"
 	echo "dev=${Dev}" >>"${LOGFILE}"
