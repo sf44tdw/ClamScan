@@ -13,6 +13,7 @@ sed -i '/^Example/s/^/#/' ${CLAMD_CONFIG_FILE_NAME}
 sed -i 's/^User clamscan/User root/g' ${CLAMD_CONFIG_FILE_NAME}
 sed -i 's/^#TCPSocket 3310/TCPSocket 3310/g' ${CLAMD_CONFIG_FILE_NAME}
 sed -i 's/^#TCPAddr 127.0.0.1/TCPAddr 127.0.0.1/g' ${CLAMD_CONFIG_FILE_NAME}
+sed -i 's/^#LocalSocket \/run\/clamd.scan\/clamd.sock/LocalSocket \/run\/clamd.scan\/clamd.sock/g' ${CLAMD_CONFIG_FILE_NAME}
 sed -i '/^#ExcludePath \^\/.*/d' ${CLAMD_CONFIG_FILE_NAME}
 sed -i '/^ExcludePath \^\/.*/d' ${CLAMD_CONFIG_FILE_NAME}
 
