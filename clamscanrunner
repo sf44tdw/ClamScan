@@ -113,7 +113,7 @@ mkdir -p "${LOGDIR}" && chmod 755 "${LOGDIR}"
 
 date +%Y%m%d%H%M%S >>"${LOGFILE}"
 
-if [ "${ENABLE_f}" != "t" ]; then
+if [ "${ENABLE_f}" = "t" ]; then
 	echo '-fオプションが有効です。' >>"${LOGFILE}"
 	if [ -f "${_lockfile}" ]; then
 		echo 'ロックファイルを強制的に削除し、処理を継続します。' >>"${LOGFILE}"
