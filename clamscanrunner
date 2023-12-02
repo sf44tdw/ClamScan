@@ -23,7 +23,7 @@ readonly STATUS_ENABLED="enabled"
 readonly MY_NAME=$(basename "${0}")
 
 #ロックファイルのパス
-_lockfile="/tmp/${MY_NAME}.lock"
+readonly _lockfile="/tmp/${MY_NAME}.lock"
 
 function delete_lock_file_and_exit() {
 	local -r EXIT_CODE="${1}"
@@ -43,7 +43,8 @@ function delete_lock_file_and_exit() {
 }
 
 function delete_lock_and_exit() {
-	echo "${1}_${3}" >>"${2}"
+	local -r YMD_VAL=$(date +%Y%m%d%H%M%S)
+	echo "${YMD_VAL}_${1}_${3}" >>"${2}"
 	delete_lock_file_and_exit "${3}"
 }
 
@@ -78,10 +79,17 @@ done
 
 shift $((OPTIND - 1))
 
+
+readonly LOGDIR="/var/log/clamav-scan-log"
+readonly LOGFILE="${LOGDIR}/$(date +%Y%m%d%H%M%S).log"
+mkdir -p "${LOGDIR}" && chmod 755 "${LOGDIR}"
+
+echo "$(date +%Y%m%d%H%M%S)_開始します。" >>"${LOGFILE}"
+
 expr "${DEV_OPTARG}" + 1 >&/dev/null
 readonly RET_DEV_OPTARG_ISNUMERIC="${?}"
 if [ "${RET_DEV_OPTARG_ISNUMERIC}" -ge 2 ] || [ "${DEV_OPTARG}" -lt 1 ] || [ "${DEV_OPTARG}" -gt 24  ]; then
-	echo "-dオプションで取得した値が異常です。取得した値=${DEV_OPTARG}" 1>&2
+	echo "$(date +%Y%m%d%H%M%S)_-dオプションで取得した値が異常です。取得した値=${DEV_OPTARG}" >>"${LOGFILE}"
 	usage_exit
 fi
 
@@ -106,22 +114,26 @@ if [ -s "${EXCLUDELIST}" ]; then
 	done
 fi
 
+if [ "${ENABLE_f}" = "t" ]; then
+	echo "$(date +%Y%m%d%H%M%S)_-fオプションが有効です。" >>"${LOGFILE}"
+	if [ -f "${_lockfile}" ]; then
+		echo "$(date +%Y%m%d%H%M%S)_ロックファイルを強制的に削除し、処理を継続します。" >>"${LOGFILE}"
+		rm -f "${_lockfile}" >>"${LOGFILE}" 2>&1
+		echo "$(date +%Y%m%d%H%M%S)_ロックファイルを強制的に削除しました。結果にかかわらず処理を続行します。" >>"${LOGFILE}"
+	fi
+fi
+
 #ロックファイル生成。
+echo "$(date +%Y%m%d%H%M%S)_ロックファイル生成。" >>"${LOGFILE}"
 ln -s /dummy "${_lockfile}" >/dev/null 2>&1 || {
-	echo 'Cannot run multiple instance.'
+	echo "$(date +%Y%m%d%H%M%S)_Cannot run multiple instance." >>"${LOGFILE}"
 	#他のプロセスが起動中なのでロックファイルは削除しない。
 	exit 110
 }
 
 trap 'rm "${_lockfile}"; exit' SIGHUP SIGINT SIGQUIT SIGTERM
 
-readonly LOGDIR="/var/log/clamav-scan-log"
-readonly LOGFILE="${LOGDIR}/$(date +%Y%m%d%H%M%S).log"
-
-mkdir -p "${LOGDIR}" && chmod 755 "${LOGDIR}"
-
-date +%Y%m%d%H%M%S >>"${LOGFILE}"
-
+echo "$(date +%Y%m%d%H%M%S)_実行間隔制限判定開始。" >>"${LOGFILE}"
 if [ "${ENABLE_f}" != "t" ]; then
 	#今の時間(何時?)
 	NowHour=$(date +%-H)
@@ -136,9 +148,12 @@ if [ "${ENABLE_f}" != "t" ]; then
 	if [ ! "0" -eq ${mod} ]; then
 		delete_lock_and_exit "起動間隔を制限しています。この時間は終了します。" "${LOGFILE}" 2
 	fi
+else
+	echo "$(date +%Y%m%d%H%M%S)_-fオプションが有効です。" >>"${LOGFILE}"
 fi
 
 #制限が有効で、clamscanもしくはfreshclamが既に実行中だった場合、起動しない。
+echo "$(date +%Y%m%d%H%M%S)_プロセス確認。" >>"${LOGFILE}"
 if [ "${ENABLE_f}" != "t" ]; then
 	readonly UP_LIST=$(pgrep -l "${UPDATOR}" | grep -v grep | grep -v "${MY_NAME}")
 	readonly UP_COUNT=$(echo "${UP_LIST}" | grep -v '^\s*$' | wc -l)
@@ -152,21 +167,20 @@ if [ "${ENABLE_f}" != "t" ]; then
 	if [ "${SCAN_COUNT}" != 0 ]; then
 		delete_lock_and_exit "${SCANNER}が起動中です。終了します。" "${LOGFILE}" 3
 	fi
-
+else
+	echo "$(date +%Y%m%d%H%M%S)_-fオプションが有効です。" >>"${LOGFILE}"
 fi
 
 # ファイル更新日時が5000日を越えたログファイルを削除
+echo "$(date +%Y%m%d%H%M%S)_旧ログ削除。" >>"${LOGFILE}"
 readonly PARAM_DATE_NUM=5000
 find "${LOGDIR}" -name "*.log" -type f -mtime +"${PARAM_DATE_NUM}" -exec rm -f {} \;
 
-date +%Y%m%d%H%M%S >>"${LOGFILE}"
-
+echo "$(date +%Y%m%d%H%M%S)_DB更新。" >>"${LOGFILE}"
 # DB update
 # epelからインストールの場合、freshclamのインストール時に、3時間ごとの自動更新(freshclam-sleep)が登録されるのであまり意味が無いが、念のため。
 ${UPDATOR} >>"${LOGFILE}" 2>&1
 readonly RET_FRESHCLAM="${?}"
-
-date +%Y%m%d%H%M%S >>"${LOGFILE}"
 if [ "${RET_FRESHCLAM}" -ne 0 ]; then
 	delete_lock_and_exit "freshclamの戻り値が${RET_FRESHCLAM}です。終了します。" "${LOGFILE}" 3
 fi
@@ -181,7 +195,7 @@ readonly CLAMD_SERVICE='clamd@scan'
 readonly ON_ACCESS_ENABLED=$(systemctl is-enabled ${ON_ACCESS_SCAN_SERVICE} 2>>"${LOGFILE}")
 readonly CLAMD_ENABLED=$(systemctl is-enabled ${CLAMD_SERVICE} 2>>"${LOGFILE}")
 
-echo "オンアクセススキャンを停止する。" >>"${LOGFILE}"
+echo "$(date +%Y%m%d%H%M%S)_オンアクセススキャンを停止する。" >>"${LOGFILE}"
 if [ "${ON_ACCESS_ENABLED}" = "${STATUS_ENABLED}" ]; then
 	readonly STATUS_CLAMONACC_PRE_BEFORE_SCAN=$(systemctl is-active ${ON_ACCESS_SCAN_SERVICE})
 	echo "${ON_ACCESS_SCAN_SERVICE}の状態(停止前) = ${STATUS_CLAMONACC_PRE_BEFORE_SCAN}" >>"${LOGFILE}"
@@ -211,11 +225,9 @@ if [ "${CLAMD_ENABLED}" = "${STATUS_ENABLED}" ]; then
 	fi
 	wait_2_min
 fi
+echo "$(date +%Y%m%d%H%M%S)_オンアクセススキャンの停止を完了。" >>"${LOGFILE}"
 
-echo "オンアクセススキャンの停止を完了。" >>"${LOGFILE}"
-
-date +%Y%m%d%H%M%S >>"${LOGFILE}"
-
+echo "$(date +%Y%m%d%H%M%S)_スキャン開始。" >>"${LOGFILE}"
 # virus scan
 #感染したファイルのみログに記載する。
 #感染したファイルは隔離する。
@@ -225,16 +237,13 @@ nice "${NICE_ARGS[@]}" >>"${LOGFILE}" 2>&1
 
 readonly RET_CLAMSCAN="${?}"
 if [ "${RET_CLAMSCAN}" -ne 0 ]; then
-	date +%Y%m%d%H%M%S >>"${LOGFILE}"
-	echo "clamscanの戻り値が${RET_CLAMSCAN}です。" >>"${LOGFILE}"
+	echo "$(date +%Y%m%d%H%M%S)_clamscanの戻り値が${RET_CLAMSCAN}です。" >>"${LOGFILE}"
 fi
+echo "$(date +%Y%m%d%H%M%S)_スキャン終了。" >>"${LOGFILE}"
 
 #再開の際は、ステータスがactiveでないなら再始動を試みる。
 
-date +%Y%m%d%H%M%S >>"${LOGFILE}"
-
-echo "オンアクセススキャンを再開する。" >>"${LOGFILE}"
-
+echo "$(date +%Y%m%d%H%M%S)_オンアクセススキャンを再開する。" >>"${LOGFILE}"
 if [ "${CLAMD_ENABLED}" = "${STATUS_ENABLED}" ]; then
 	readonly STATUS_CLAMD_PRE_AFTER_SCAN=$(systemctl is-active ${CLAMD_SERVICE})
 	echo "${CLAMD_SERVICE}の状態(再開前前) = ${STATUS_CLAMD_PRE_AFTER_SCAN}" >>"${LOGFILE}"
@@ -265,9 +274,7 @@ if [ "${ON_ACCESS_ENABLED}" = "${STATUS_ENABLED}" ]; then
 	wait_2_min
 fi
 
-echo "オンアクセススキャンの再開を完了。" >>"${LOGFILE}"
-
-date +%Y%m%d%H%M%S >>"${LOGFILE}"
+echo "$(date +%Y%m%d%H%M%S)_オンアクセススキャンの再開を完了。" >>"${LOGFILE}"
 
 #ログファイルの内容を表示
 cat "${LOGFILE}"
