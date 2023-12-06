@@ -5,9 +5,9 @@ readonly ROOT_BASH_PROFILE_PATH="${ROOT_HOME}/.bash_profile"
 readonly ROOT_PROFILE_PATH="${ROOT_HOME}/.profile"
 
 if [ -f "${ROOT_BASH_PROFILE_PATH}" ]; then
-	source "${BASH_PROFILE}" >/dev/null 2>&1 || exit 200
+	source "${ROOT_BASH_PROFILE_PATH}" >/dev/null 2>&1 || exit 200
 elif [ -f "${ROOT_PROFILE_PATH}" ]; then
-	source "${BASH_PROFILE}" >/dev/null 2>&1 || exit 210
+	source "${ROOT_PROFILE_PATH}" >/dev/null 2>&1 || exit 210
 else
 	exit 220
 fi
