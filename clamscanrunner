@@ -215,7 +215,6 @@ fi
 
 #freshclamがサービスになっていた場合は再起動する。
 echo "$(date +%Y%m%d%H%M%S)_DBアップデートサービス起動。" >>"${LOGFILE}"
-readonly FRESHCLAM_SERVICE_ENABLED=$(systemctl is-enabled ${UPDATOR_SERVICE} 2>>"${LOGFILE}")
 if [ "${FRESHCLAM_SERVICE_ENABLED}" = "${STATUS_ENABLED}" ]; then
 	readonly STATUS_FRESHCLAM_SERVICE_POST_BEFORE_SCAN=$(systemctl is-active ${UPDATOR_SERVICE})
 	echo "$(date +%Y%m%d%H%M%S)_${UPDATOR_SERVICE}の状態(再開前) = ${STATUS_FRESHCLAM_SERVICE_POST_BEFORE_SCAN}" >>"${LOGFILE}"
