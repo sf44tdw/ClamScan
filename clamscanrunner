@@ -14,6 +14,7 @@ fi
 
 #アップデータ
 readonly UPDATOR="freshclam"
+readonly UPDATOR_SERVICE="clamav-${UPDATOR}"
 
 #スキャナ
 readonly SCANNER="clamscan"
@@ -161,6 +162,29 @@ else
 	echo "$(date +%Y%m%d%H%M%S)_-fオプションが有効です。" >>"${LOGFILE}"
 fi
 
+# ファイル更新日時が5000日を越えたログファイルを削除
+echo "$(date +%Y%m%d%H%M%S)_旧ログ削除。" >>"${LOGFILE}"
+readonly PARAM_DATE_NUM=5000
+find "${LOGDIR}" -name "*.log" -type f -mtime +"${PARAM_DATE_NUM}" -exec rm -f {} \;
+
+#freshclamがサービスになっていた場合は一旦停止する。
+echo "$(date +%Y%m%d%H%M%S)_DBアップデートサービス停止。" >>"${LOGFILE}"
+readonly FRESHCLAM_SERVICE_ENABLED=$(systemctl is-enabled ${UPDATOR_SERVICE} 2>>"${LOGFILE}")
+if [ "${FRESHCLAM_SERVICE_ENABLED}" = "${STATUS_ENABLED}" ]; then
+	readonly STATUS_FRESHCLAM_SERVICE_PRE_BEFORE_SCAN=$(systemctl is-active ${UPDATOR_SERVICE})
+	echo "$(date +%Y%m%d%H%M%S)_${UPDATOR_SERVICE}の状態(停止前) = ${STATUS_FRESHCLAM_SERVICE_PRE_BEFORE_SCAN}" >>"${LOGFILE}"
+	if [ "${STATUS_FRESHCLAM_SERVICE_PRE_BEFORE_SCAN}" = "${STATUS_ACTIVE}" ]; then
+		echo "$(date +%Y%m%d%H%M%S)_${UPDATOR_SERVICE}の停止" >>"${LOGFILE}"
+		systemctl stop "${UPDATOR_SERVICE}"
+		readonly STATUS_FRESHCLAM_SERVICE_POST_BEFORE_SCAN=$(systemctl is-active ${UPDATOR_SERVICE})
+		echo "$(date +%Y%m%d%H%M%S)_${UPDATOR_SERVICE}の状態(停止後) = ${STATUS_FRESHCLAM_SERVICE_POST_BEFORE_SCAN}" >>"${LOGFILE}"
+		if [ "${STATUS_FRESHCLAM_SERVICE_POST_BEFORE_SCAN}" = "${STATUS_ACTIVE}" ]; then
+			delete_lock_and_exit "${UPDATOR_SERVICE}が停止していません。終了します。" "${LOGFILE}" 4
+		fi
+	fi
+	wait_2_min
+fi
+
 #制限が有効で、clamscanもしくはfreshclamが既に実行中だった場合、起動しない。
 echo "$(date +%Y%m%d%H%M%S)_プロセス確認。" >>"${LOGFILE}"
 if [ "${ENABLE_f}" != "t" ]; then
@@ -180,11 +204,6 @@ else
 	echo "$(date +%Y%m%d%H%M%S)_-fオプションが有効です。" >>"${LOGFILE}"
 fi
 
-# ファイル更新日時が5000日を越えたログファイルを削除
-echo "$(date +%Y%m%d%H%M%S)_旧ログ削除。" >>"${LOGFILE}"
-readonly PARAM_DATE_NUM=5000
-find "${LOGDIR}" -name "*.log" -type f -mtime +"${PARAM_DATE_NUM}" -exec rm -f {} \;
-
 echo "$(date +%Y%m%d%H%M%S)_DB更新。" >>"${LOGFILE}"
 # DB update
 # epelからインストールの場合、freshclamのインストール時に、3時間ごとの自動更新(freshclam-sleep)が登録されるのであまり意味が無いが、念のため。
@@ -192,6 +211,24 @@ ${UPDATOR} >>"${LOGFILE}" 2>&1
 readonly RET_FRESHCLAM="${?}"
 if [ "${RET_FRESHCLAM}" -ne 0 ]; then
 	delete_lock_and_exit "freshclamの戻り値が${RET_FRESHCLAM}です。終了します。" "${LOGFILE}" 12
+fi
+
+#freshclamがサービスになっていた場合は再起動する。
+echo "$(date +%Y%m%d%H%M%S)_DBアップデートサービス起動。" >>"${LOGFILE}"
+readonly FRESHCLAM_SERVICE_ENABLED=$(systemctl is-enabled ${UPDATOR_SERVICE} 2>>"${LOGFILE}")
+if [ "${FRESHCLAM_SERVICE_ENABLED}" = "${STATUS_ENABLED}" ]; then
+	readonly STATUS_FRESHCLAM_SERVICE_POST_BEFORE_SCAN=$(systemctl is-active ${UPDATOR_SERVICE})
+	echo "$(date +%Y%m%d%H%M%S)_${UPDATOR_SERVICE}の状態(再開前) = ${STATUS_FRESHCLAM_SERVICE_POST_BEFORE_SCAN}" >>"${LOGFILE}"
+	if [ "${STATUS_FRESHCLAM_SERVICE_POST_BEFORE_SCAN}" != "${STATUS_ACTIVE}" ]; then
+		echo "$(date +%Y%m%d%H%M%S)_${UPDATOR_SERVICE}の開始" >>"${LOGFILE}"
+		systemctl restart "${UPDATOR_SERVICE}"
+		readonly STATUS_FRESHCLAM_SERVICE_POST_BEFORE_SCAN=$(systemctl is-active ${UPDATOR_SERVICE})
+		echo "$(date +%Y%m%d%H%M%S)_${UPDATOR_SERVICE}の状態(再開後) = ${STATUS_FRESHCLAM_SERVICE_POST_BEFORE_SCAN}" >>"${LOGFILE}"
+		if [ "${STATUS_FRESHCLAM_SERVICE_POST_BEFORE_SCAN}" != "${STATUS_ACTIVE}" ]; then
+			delete_lock_and_exit "${UPDATOR_SERVICE}の開始に失敗しました。終了します。" "${LOGFILE}" 4
+		fi
+	fi
+	wait_2_min
 fi
 
 #clamdのメモリ消費量が大きいので、スキャン中はオンアクセススキャンを停止する。
