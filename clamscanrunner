@@ -47,6 +47,7 @@ function is_numeric() {
 }
 
 function delete_lock_file_and_exit() {
+	local -r EXIT_CODE="${1}"
 	is_numeric "${EXIT_CODE}"
 	local -r ret="${?}"
 	if [ "${ret}" -ge 2 ]; then
