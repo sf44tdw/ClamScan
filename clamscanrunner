@@ -83,7 +83,7 @@ function wait_2_min() {
 function systemd_service_start_stop(){
 	local -r TARGET_SERVICE_NAME="${1}"
 	local -r EXPECTED_TAREGT_SERVICE_STATUS_BEFORE_OPERATION="${2}"
-	local -r SYSTEMCTL_OPERATION="${3"}
+	local -r SYSTEMCTL_OPERATION="${3}"
 	local -r EXPECTED_TAREGT_SERVICE_STATUS_AFTER_OPERATION="${4}"
 	local -r EXIT_CODE_NUM="${5}"
 	
