@@ -87,7 +87,7 @@ function systemd_service_start_stop(){
 	local -r EXPECTED_TAREGT_SERVICE_STATUS_AFTER_OPERATION="${4}"
 	local -r EXIT_CODE_NUM="${5}"
 	
-	value_is_numeric "${EXIT_CODE_NUM}"
+	is_numeric "${EXIT_CODE_NUM}"
 	local -r ret="${?}"
 	if [ "${ret}" -ge 2 ]; then
 			echo "$(date +%Y%m%d%H%M%S)_EXIT_CODE_NUM_${EXIT_CODE_NUM}が数値ではありません。終了します。"
