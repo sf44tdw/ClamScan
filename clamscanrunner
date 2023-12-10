@@ -36,9 +36,18 @@ readonly MY_NAME=$(basename "${0}")
 #ロックファイルのパス
 readonly _lockfile="/tmp/${MY_NAME}.lock"
 
+function is_numeric() {
+	local -r INPUT_VALUE="${1}"
+	expr "${INPUT_VALUE}" + 1 >/dev/null 2>&1
+	local -r ret="${?}"
+	if [ "${ret}" -ge 2 ]; then
+		return "${ret}"
+	fi
+	return 0
+}
+
 function delete_lock_file_and_exit() {
-	local -r EXIT_CODE="${1}"
-	expr "${EXIT_CODE}" + 1 >/dev/null 2>&1
+	is_numeric "${EXIT_CODE}"
 	local -r ret="${?}"
 	if [ "${ret}" -ge 2 ]; then
 		echo "指定された戻り値が数字ではない。戻り値=${EXIT_CODE}"1 >&2
@@ -141,7 +150,7 @@ mkdir -p "${LOGDIR}" && chmod 755 "${LOGDIR}"
 
 echo "$(date +%Y%m%d%H%M%S)_開始します。" >>"${LOGFILE}"
 
-expr "${DEV_OPTARG}" + 1 >&/dev/null
+is_numeric "${DEV_OPTARG}"
 readonly RET_DEV_OPTARG_ISNUMERIC="${?}"
 if [ "${RET_DEV_OPTARG_ISNUMERIC}" -ge 2 ] || [ "${DEV_OPTARG}" -lt 1 ] || [ "${DEV_OPTARG}" -gt 24  ]; then
 	echo "$(date +%Y%m%d%H%M%S)_-dオプションで取得した値が異常です。取得した値=${DEV_OPTARG}" >>"${LOGFILE}"
