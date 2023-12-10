@@ -71,6 +71,51 @@ function wait_2_min() {
 	sleep 120
 }
 
+function stop_systemd_service (){
+	local -r TARGET_SERVICE_NAME="${1}"
+	local -r EXIT_CODE_NUM="${2}"
+	local -r TARGET_SERVICE_ENABLED=$(systemctl is-enabled "${TARGET_SERVICE_NAME}")
+	if [ "${TARGET_SERVICE_ENABLED}" = "${STATUS_ENABLED}" ]; then
+		local -r TARGET_SERVICE_STATUS_BEFORE_STOP=$(systemctl is-active "${UPDATOR_SERVICE}")
+		echo "$(date +%Y%m%d%H%M%S)_${TARGET_SERVICE_NAME}の状態(停止前) = ${SERVICE_STATUS_PRE_BEFORE_STOP}"
+		if [ "${TARGET_SERVICE_STATUS_BEFORE_STOP}" = "${STATUS_ACTIVE}" ]; then
+			echo "$(date +%Y%m%d%H%M%S)_${TARGET_SERVICE_NAME}の停止"
+			systemctl stop "${TARGET_SERVICE_NAME}"
+			wait_2_min
+			local -r local -r TARGET_SERVICE_STATUS_AFTER_STOP=$(systemctl is-active "${TARGET_SERVICE_NAME}")
+			echo "$(date +%Y%m%d%H%M%S)_${TARGET_SERVICE_NAME}の状態(停止後) = ${TARGET_SERVICE_STATUS_AFTER_STOP}"
+			if [ "${TARGET_SERVICE_STATUS_AFTER_STOP}" = "${STATUS_ACTIVE}" ]; then
+				echo "$(date +%Y%m%d%H%M%S)_${TARGET_SERVICE_NAME}が停止していません。終了します。"
+				delete_lock_file_and_exit "${EXIT_CODE_NUM}"
+			fi
+		fi
+	fi
+	return 0
+}
+
+function restart_systemd_service (){
+	local -r TARGET_SERVICE_NAME="${1}"
+	local -r EXIT_CODE_NUM="${2}"
+	local -r TARGET_SERVICE_ENABLED=$(systemctl is-enabled "${TARGET_SERVICE_NAME}")
+	if [ "${TARGET_SERVICE_ENABLED}" = "${STATUS_ENABLED}" ]; then
+		local -r TARGET_SERVICE_STATUS_BEFORE_RESTART=$(systemctl is-active "${UPDATOR_SERVICE}")
+		echo "$(date +%Y%m%d%H%M%S)_${TARGET_SERVICE_NAME}の状態(再起動前) = ${SERVICE_STATUS_PRE_BEFORE_RESTART}"
+		if [ "${TARGET_SERVICE_STATUS_BEFORE_RESTART}" = "${STATUS_ACTIVE}" ]; then
+			echo "$(date +%Y%m%d%H%M%S)_${TARGET_SERVICE_NAME}の再起動"
+			systemctl restart "${TARGET_SERVICE_NAME}"
+			wait_2_min
+			local -r local -r TARGET_SERVICE_STATUS_AFTER_RESTART=$(systemctl is-active "${TARGET_SERVICE_NAME}")
+			echo "$(date +%Y%m%d%H%M%S)_${TARGET_SERVICE_NAME}の状態(再起動後) = ${TARGET_SERVICE_STATUS_AFTER_RESTART}"
+			if [ "${TARGET_SERVICE_STATUS_AFTER_RESTART}" = "${STATUS_ACTIVE}" ]; then
+				echo "$(date +%Y%m%d%H%M%S)_${TARGET_SERVICE_NAME}が再起動していません。終了します。"
+				delete_lock_file_and_exit "${EXIT_CODE_NUM}"
+			fi
+		fi
+	fi
+	return 0
+}
+
+
 ENABLE_f="f"
 DEV_OPTARG="1"
 
@@ -169,21 +214,7 @@ find "${LOGDIR}" -name "*.log" -type f -mtime +"${PARAM_DATE_NUM}" -exec rm -f {
 
 #freshclamがサービスになっていた場合は一旦停止する。
 echo "$(date +%Y%m%d%H%M%S)_DBアップデートサービス停止。" >>"${LOGFILE}"
-readonly FRESHCLAM_SERVICE_ENABLED=$(systemctl is-enabled ${UPDATOR_SERVICE} 2>>"${LOGFILE}")
-if [ "${FRESHCLAM_SERVICE_ENABLED}" = "${STATUS_ENABLED}" ]; then
-	readonly STATUS_FRESHCLAM_SERVICE_PRE_BEFORE_UPDATE=$(systemctl is-active ${UPDATOR_SERVICE})
-	echo "$(date +%Y%m%d%H%M%S)_${UPDATOR_SERVICE}の状態(停止前) = ${STATUS_FRESHCLAM_SERVICE_PRE_BEFORE_UPDATE}" >>"${LOGFILE}"
-	if [ "${STATUS_FRESHCLAM_SERVICE_PRE_BEFORE_UPDATE}" = "${STATUS_ACTIVE}" ]; then
-		echo "$(date +%Y%m%d%H%M%S)_${UPDATOR_SERVICE}の停止" >>"${LOGFILE}"
-		systemctl stop "${UPDATOR_SERVICE}"
-		readonly STATUS_FRESHCLAM_SERVICE_POST_BEFORE_UPDATE=$(systemctl is-active ${UPDATOR_SERVICE})
-		echo "$(date +%Y%m%d%H%M%S)_${UPDATOR_SERVICE}の状態(停止後) = ${STATUS_FRESHCLAM_SERVICE_POST_BEFORE_UPDATE}" >>"${LOGFILE}"
-		if [ "${STATUS_FRESHCLAM_SERVICE_POST_BEFORE_UPDATE}" = "${STATUS_ACTIVE}" ]; then
-			delete_lock_and_exit "${UPDATOR_SERVICE}が停止していません。終了します。" "${LOGFILE}" 11
-		fi
-	fi
-	wait_2_min
-fi
+stop_systemd_service "${UPDATOR_SERVICE}" 11 >>"${LOGFILE}" 2>&1
 
 #制限が有効で、clamscanもしくはfreshclamが既に実行中だった場合、起動しない。
 echo "$(date +%Y%m%d%H%M%S)_プロセス確認。" >>"${LOGFILE}"
@@ -215,20 +246,7 @@ fi
 
 #freshclamがサービスになっていた場合は再起動する。
 echo "$(date +%Y%m%d%H%M%S)_DBアップデートサービス起動。" >>"${LOGFILE}"
-if [ "${FRESHCLAM_SERVICE_ENABLED}" = "${STATUS_ENABLED}" ]; then
-	readonly STATUS_FRESHCLAM_SERVICE_PRE_AFTER_UPDATE=$(systemctl is-active ${UPDATOR_SERVICE})
-	echo "$(date +%Y%m%d%H%M%S)_${UPDATOR_SERVICE}の状態(再開前) = ${STATUS_FRESHCLAM_SERVICE_PRE_AFTER_UPDATE}" >>"${LOGFILE}"
-	if [ "${STATUS_FRESHCLAM_SERVICE_PRE_AFTER_UPDATE}" != "${STATUS_ACTIVE}" ]; then
-		echo "$(date +%Y%m%d%H%M%S)_${UPDATOR_SERVICE}の開始" >>"${LOGFILE}"
-		systemctl restart "${UPDATOR_SERVICE}"
-		readonly STATUS_FRESHCLAM_SERVICE_POST_AFTER_UPDATE=$(systemctl is-active ${UPDATOR_SERVICE})
-		echo "$(date +%Y%m%d%H%M%S)_${UPDATOR_SERVICE}の状態(再開後) = ${STATUS_FRESHCLAM_SERVICE_POST_AFTER_UPDATE}" >>"${LOGFILE}"
-		if [ "${STATUS_FRESHCLAM_SERVICE_POST_AFTER_UPDATE}" != "${STATUS_ACTIVE}" ]; then
-			delete_lock_and_exit "${UPDATOR_SERVICE}の開始に失敗しました。終了します。" "${LOGFILE}" 15
-		fi
-	fi
-	wait_2_min
-fi
+restart_systemd_service "${UPDATOR_SERVICE}" 15 >>"${LOGFILE}" 2>&1
 
 #clamdのメモリ消費量が大きいので、スキャン中はオンアクセススキャンを停止する。
 #サービスが有効では無い場合は何もしない。
@@ -236,40 +254,9 @@ fi
 readonly ON_ACCESS_SCAN_SERVICE='clamonacc'
 readonly CLAMD_SERVICE='clamd@scan'
 
-#関連するサービスの有効性を確認する。
-readonly ON_ACCESS_ENABLED=$(systemctl is-enabled ${ON_ACCESS_SCAN_SERVICE} 2>>"${LOGFILE}")
-readonly CLAMD_ENABLED=$(systemctl is-enabled ${CLAMD_SERVICE} 2>>"${LOGFILE}")
-
 echo "$(date +%Y%m%d%H%M%S)_オンアクセススキャンを停止する。" >>"${LOGFILE}"
-if [ "${ON_ACCESS_ENABLED}" = "${STATUS_ENABLED}" ]; then
-	readonly STATUS_CLAMONACC_PRE_BEFORE_SCAN=$(systemctl is-active ${ON_ACCESS_SCAN_SERVICE})
-	echo "${ON_ACCESS_SCAN_SERVICE}の状態(停止前) = ${STATUS_CLAMONACC_PRE_BEFORE_SCAN}" >>"${LOGFILE}"
-	if [ "${STATUS_CLAMONACC_PRE_BEFORE_SCAN}" = "${STATUS_ACTIVE}" ]; then
-		echo "${ON_ACCESS_SCAN_SERVICE}の停止" >>"${LOGFILE}"
-		systemctl stop "${ON_ACCESS_SCAN_SERVICE}"
-		readonly STATUS_CLAMONACC_POST_BEFORE_SCAN=$(systemctl is-active ${ON_ACCESS_SCAN_SERVICE})
-		echo "${ON_ACCESS_SCAN_SERVICE}の状態(停止後) = ${STATUS_CLAMONACC_POST_BEFORE_SCAN}" >>"${LOGFILE}"
-		if [ "${STATUS_CLAMONACC_POST_BEFORE_SCAN}" = "${STATUS_ACTIVE}" ]; then
-			delete_lock_and_exit "${ON_ACCESS_SCAN_SERVICE}が停止していません。終了します。" "${LOGFILE}" 16
-		fi
-	fi
-	wait_2_min
-fi
-
-if [ "${CLAMD_ENABLED}" = "${STATUS_ENABLED}" ]; then
-	readonly STATUS_CLAMD_PRE_BEFORE_SCAN=$(systemctl is-active ${CLAMD_SERVICE})
-	echo "${CLAMD_SERVICE}の状態(停止前) = ${STATUS_CLAMD_PRE_BEFORE_SCAN}" >>"${LOGFILE}"
-	if [ "${STATUS_CLAMD_PRE_BEFORE_SCAN}" = "${STATUS_ACTIVE}" ]; then
-		echo "${CLAMD_SERVICE}の停止" >>"${LOGFILE}"
-		systemctl stop "${CLAMD_SERVICE}"
-		readonly STATUS_CLAMD_POST_BEFORE_SCAN=$(systemctl is-active ${CLAMD_SERVICE})
-		echo "${CLAMD_SERVICE}の状態(停止後) = ${STATUS_CLAMD_POST_BEFORE_SCAN}" >>"${LOGFILE}"
-		if [ "${STATUS_CLAMD_POST_BEFORE_SCAN}" = "${STATUS_ACTIVE}" ]; then
-			delete_lock_and_exit "${CLAMD_SERVICE}が停止していません。終了します。" "${LOGFILE}" 17
-		fi
-	fi
-	wait_2_min
-fi
+stop_systemd_service "${ON_ACCESS_SCAN_SERVICE}" 16 >>"${LOGFILE}" 2>&1
+stop_systemd_service "${CLAMD_SERVICE}" 17 >>"${LOGFILE}" 2>&1
 echo "$(date +%Y%m%d%H%M%S)_オンアクセススキャンの停止を完了。" >>"${LOGFILE}"
 
 echo "$(date +%Y%m%d%H%M%S)_スキャン開始。" >>"${LOGFILE}"
@@ -289,35 +276,9 @@ echo "$(date +%Y%m%d%H%M%S)_スキャン終了。" >>"${LOGFILE}"
 #再開の際は、ステータスがactiveでないなら再始動を試みる。
 
 echo "$(date +%Y%m%d%H%M%S)_オンアクセススキャンを再開する。" >>"${LOGFILE}"
-if [ "${CLAMD_ENABLED}" = "${STATUS_ENABLED}" ]; then
-	readonly STATUS_CLAMD_PRE_AFTER_SCAN=$(systemctl is-active ${CLAMD_SERVICE})
-	echo "${CLAMD_SERVICE}の状態(再開前前) = ${STATUS_CLAMD_PRE_AFTER_SCAN}" >>"${LOGFILE}"
-	if [ "${STATUS_CLAMD_PRE_AFTER_SCAN}" != "${STATUS_ACTIVE}" ]; then
-		echo "${CLAMD_SERVICE}の開始" >>"${LOGFILE}" 2>&1
-		systemctl restart "${CLAMD_SERVICE}"
-		readonly STATUS_CLAMD_POST_AFTER_SCAN=$(systemctl is-active ${CLAMD_SERVICE})
-		echo "${CLAMD_SERVICE}の状態(再開後) = ${STATUS_CLAMD_POST_AFTER_SCAN}" >>"${LOGFILE}"
-		if [ "${STATUS_CLAMD_POST_AFTER_SCAN}" != "${STATUS_ACTIVE}" ]; then
-			delete_lock_and_exit "${CLAMD_SERVICE}の開始に失敗しました。終了します。" "${LOGFILE}" 18
-		fi
-	fi
-	wait_2_min
-fi
+restart_systemd_service "${CLAMD_SERVICE}" 18 >>"${LOGFILE}" 2>&1
+restart_systemd_service "${ON_ACCESS_SCAN_SERVICE}" 19 >>"${LOGFILE}" 2>&1
 
-if [ "${ON_ACCESS_ENABLED}" = "${STATUS_ENABLED}" ]; then
-	readonly STATUS_CLAMONACC_PRE_AFTER_SCAN=$(systemctl is-active ${ON_ACCESS_SCAN_SERVICE})
-	echo "${ON_ACCESS_SCAN_SERVICE}の状態(再開前) = ${STATUS_CLAMONACC_PRE_AFTER_SCAN}" >>"${LOGFILE}"
-	if [ "${STATUS_CLAMONACC_PRE_AFTER_SCAN}" != "${STATUS_ACTIVE}" ]; then
-		echo "${ON_ACCESS_SCAN_SERVICE}の開始" >>"${LOGFILE}"
-		systemctl restart "${ON_ACCESS_SCAN_SERVICE}"
-		readonly STATUS_CLAMONACC_POST_AFTER_SCAN=$(systemctl is-active ${ON_ACCESS_SCAN_SERVICE})
-		echo "${ON_ACCESS_SCAN_SERVICE}の状態(再開後) = ${STATUS_CLAMONACC_POST_AFTER_SCAN}" >>"${LOGFILE}"
-		if [ "${STATUS_CLAMONACC_POST_AFTER_SCAN}" != "${STATUS_ACTIVE}" ]; then
-			delete_lock_and_exit "${ON_ACCESS_SCAN_SERVICE}の開始に失敗しました。終了します。" "${LOGFILE}" 19
-		fi
-	fi
-	wait_2_min
-fi
 
 echo "$(date +%Y%m%d%H%M%S)_オンアクセススキャンの再開を完了。" >>"${LOGFILE}"
 
