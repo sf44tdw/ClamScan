@@ -77,7 +77,7 @@ function stop_systemd_service (){
 	local -r TARGET_SERVICE_ENABLED=$(systemctl is-enabled "${TARGET_SERVICE_NAME}")
 	if [ "${TARGET_SERVICE_ENABLED}" = "${STATUS_ENABLED}" ]; then
 		local -r TARGET_SERVICE_STATUS_BEFORE_STOP=$(systemctl is-active "${UPDATOR_SERVICE}")
-		echo "$(date +%Y%m%d%H%M%S)_${TARGET_SERVICE_NAME}の状態(停止前) = ${SERVICE_STATUS_PRE_BEFORE_STOP}"
+		echo "$(date +%Y%m%d%H%M%S)_${TARGET_SERVICE_NAME}の状態(停止前) = ${TARGET_SERVICE_STATUS_BEFORE_STOP}"
 		if [ "${TARGET_SERVICE_STATUS_BEFORE_STOP}" = "${STATUS_ACTIVE}" ]; then
 			echo "$(date +%Y%m%d%H%M%S)_${TARGET_SERVICE_NAME}の停止"
 			systemctl stop "${TARGET_SERVICE_NAME}"
@@ -99,7 +99,7 @@ function restart_systemd_service (){
 	local -r TARGET_SERVICE_ENABLED=$(systemctl is-enabled "${TARGET_SERVICE_NAME}")
 	if [ "${TARGET_SERVICE_ENABLED}" = "${STATUS_ENABLED}" ]; then
 		local -r TARGET_SERVICE_STATUS_BEFORE_RESTART=$(systemctl is-active "${UPDATOR_SERVICE}")
-		echo "$(date +%Y%m%d%H%M%S)_${TARGET_SERVICE_NAME}の状態(再起動前) = ${SERVICE_STATUS_PRE_BEFORE_RESTART}"
+		echo "$(date +%Y%m%d%H%M%S)_${TARGET_SERVICE_NAME}の状態(再起動前) = ${TARGET_SERVICE_STATUS_BEFORE_RESTART}"
 		if [ "${TARGET_SERVICE_STATUS_BEFORE_RESTART}" = "${STATUS_ACTIVE}" ]; then
 			echo "$(date +%Y%m%d%H%M%S)_${TARGET_SERVICE_NAME}の再起動"
 			systemctl restart "${TARGET_SERVICE_NAME}"
