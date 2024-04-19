@@ -14,7 +14,7 @@ fi
 
 PROCNAME="${1}"
 
-if [ ! -z "${PROCNAME}" ]; then
+if [ -z "${PROCNAME}" ]; then
 	echo "String Error."
 	exit 1
 fi
