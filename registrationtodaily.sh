@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#起動時にロックファイルを消去する設定を入れる。
+#再起動後にロックファイルを消去するコマンドを入れる。
 #毎日1回、全域のスキャンを行い、感染したファイルを削除するように設定する。
 
 source ./pathes
@@ -10,7 +10,7 @@ source ./pathes
 chown root:root "${ROCKFILE_ERASER_SRC}"
 chmod 755 "${ROCKFILE_ERASER_SRC}"
 cp -pf "${ROCKFILE_ERASER_SRC}" "${ROCKFILE_ERASER_SCRIPT_DEST}"
-echo "0 * * * * ${ROCKFILE_ERASER_SCRIPT_DEST} ${SCRIPT}" >"${ROCKFILE_ERASER_DEST}"
+echo "@reboot sleep 60 && ${ROCKFILE_ERASER_SCRIPT_DEST} ${SCRIPT}" >"${ROCKFILE_ERASER_DEST}"
 chown root:root "${ROCKFILE_ERASER_DEST}"
 chmod 644 "${ROCKFILE_ERASER_DEST}"
 
