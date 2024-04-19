@@ -20,7 +20,8 @@ if [ -z "${PROCNAME}" ]; then
 fi
 
 LOCKFILE="/tmp/${PROCNAME}.lock"
-ps=$(ps aux | grep ${PROCNAME} | grep -v grep | grep -v "${BASH_SOURCE[0]##*/}") | wc -l
+ps_list=$(ps aux | grep ${PROCNAME} | grep -v grep | grep -v "${BASH_SOURCE[0]##*/}")
+ps_count=$(echo "${ps_llist}" | wc -l)
 if [ $ps -eq 0 ]; then # 対象プロセスが存在しない場合
 	rm -f "${LOCKFILE}"
 	exit 0
