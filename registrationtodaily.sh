@@ -11,7 +11,7 @@ chown root:root "${ROCKFILE_ERASER_SRC}"
 chmod 755 "${ROCKFILE_ERASER_SRC}"
 cp -pf "${ROCKFILE_ERASER_SRC}" "${ROCKFILE_ERASER_SCRIPT_DEST}"
 echo "SHELL=/bin/bash" >"${ROCKFILE_ERASER_DEST}"
-echo "@reboot sleep 60 && ${ROCKFILE_ERASER_SCRIPT_DEST} ${SCRIPT}" >>"${ROCKFILE_ERASER_DEST}"
+echo "@reboot root sleep 60 && ${ROCKFILE_ERASER_SCRIPT_DEST} ${SCRIPT}" >>"${ROCKFILE_ERASER_DEST}"
 chown root:root "${ROCKFILE_ERASER_DEST}"
 chmod 644 "${ROCKFILE_ERASER_DEST}"
 
